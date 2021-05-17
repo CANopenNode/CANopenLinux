@@ -163,10 +163,10 @@ extern "C" {
 
 /**
  * @defgroup CO_socketCAN_driver_target CO_driver_target.h
+ * Linux socketCAN specific @ref CO_driver definitions for CANopenNode.
+ *
  * @ingroup CO_socketCAN
  * @{
- *
- * Linux socketCAN specific @ref CO_driver definitions for CANopenNode.
  */
 
 /**

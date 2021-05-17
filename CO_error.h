@@ -46,10 +46,10 @@ extern "C" {
 
 /**
  * @defgroup CO_socketCAN_ERROR CAN errors & Log
+ * CANopen Errors and System message log
+ *
  * @ingroup CO_socketCAN
  * @{
- *
- * CANopen Errors and System message log
  */
 
 /**

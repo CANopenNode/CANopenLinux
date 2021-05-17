@@ -43,7 +43,7 @@
 #include "CO_epoll_interface.h"
 #include "CO_storageLinux.h"
 
-/* Call external application functions. */
+/* Include optional external application functions */
 #ifdef CO_USE_APPLICATION
 #include "CO_application.h"
 #endif
@@ -117,10 +117,7 @@ typedef struct {
     uint8_t pendingNodeId;
 } mainlineStorage_t;
 
-mainlineStorage_t mlStorage = {
-    .pendingBitRate = 0,
-    .pendingNodeId = CO_LSS_NODE_ID_ASSIGNMENT
-};
+mainlineStorage_t mlStorage = {0};
 
 #if (CO_CONFIG_TRACE) & CO_CONFIG_TRACE_ENABLE
 static CO_time_t            CO_time;            /* Object for current time */
@@ -463,10 +460,30 @@ int main (int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 #endif
+#ifdef CO_USE_APPLICATION
+    /* Execute optional external application code */
+    uint32_t errInfo_app_programStart = 0;
+    err = app_programStart(&mlStorage.pendingBitRate,
+                           &mlStorage.pendingNodeId,
+                           &errInfo_app_programStart);
+    if (err != CO_ERROR_NO) {
+        if (err == CO_ERROR_OD_PARAMETERS) {
+            log_printf(LOG_CRIT, DBG_OD_ENTRY, errInfo_app_programStart);
+        }
+        else {
+            log_printf(LOG_CRIT, DBG_CAN_OPEN, "app_programStart()", err);
+        }
+        exit(EXIT_FAILURE);
+    }
+#endif
 
-    /* Overwrite stored node-id, if specified by program arguments */
+    /* Overwrite node-id, if specified by program arguments */
     if (nodeIdFromArgs > 0) {
         mlStorage.pendingNodeId = (uint8_t)nodeIdFromArgs;
+    }
+    /* verify stored values */
+    if (mlStorage.pendingNodeId < 1 || mlStorage.pendingNodeId > 127) {
+        mlStorage.pendingNodeId = CO_LSS_NODE_ID_ASSIGNMENT;
     }
 
     /* Catch signals SIGINT and SIGTERM */
@@ -613,6 +630,12 @@ int main (int argc, char *argv[]) {
                                CO_EMC_HARDWARE, storageInitError);
             }
 #endif
+#ifdef CO_USE_APPLICATION
+            if (errInfo_app_programStart != 0) {
+                CO_errorReport(CO->em, CO_EM_INCONSISTENT_OBJECT_DICT,
+                               CO_EMC_DATA_SET, errInfo_app_programStart);
+            }
+#endif
 
 #if (CO_CONFIG_TRACE) & CO_CONFIG_TRACE_ENABLE
             /* Initialize time */
@@ -648,32 +671,12 @@ int main (int argc, char *argv[]) {
                 }
             }
 #endif
-#ifdef CO_USE_APPLICATION
-            /* Execute optional additional application code */
-            errInfo = 0;
-            err = app_programStart(!CO->nodeIdUnconfigured, &errInfo);
-            if(err != CO_ERROR_NO) {
-                if (err == CO_ERROR_OD_PARAMETERS) {
-                    log_printf(LOG_CRIT, DBG_OD_ENTRY, errInfo);
-                }
-                else {
-                    log_printf(LOG_CRIT, DBG_CAN_OPEN, "app_programStart()", err);
-                }
-                programExit = EXIT_FAILURE;
-                CO_endProgram = 1;
-                continue;
-            }
-            if(errInfo != 0 && !CO->nodeIdUnconfigured) {
-                CO_errorReport(CO->em, CO_EM_INCONSISTENT_OBJECT_DICT,
-                               CO_EMC_DATA_SET, errInfo);
-            }
-#endif
         } /* if(firstRun) */
 
 
 #ifdef CO_USE_APPLICATION
-        /* Execute optional additional application code */
-        app_communicationReset(!CO->nodeIdUnconfigured);
+        /* Execute optional external application code */
+        app_communicationReset(CO);
 #endif
 
         errInfo = 0;
@@ -716,7 +719,8 @@ int main (int argc, char *argv[]) {
             CO_epoll_processLast(&epMain);
 
 #ifdef CO_USE_APPLICATION
-            app_programAsync(!CO->nodeIdUnconfigured, epMain.timeDifference_us);
+            /* Execute optional external application code */
+            app_programAsync(CO, epMain.timeDifference_us);
 #endif
 
 #if (CO_CONFIG_STORAGE) & CO_CONFIG_STORAGE_ENABLE
@@ -753,7 +757,7 @@ int main (int argc, char *argv[]) {
     }
 #endif
 #ifdef CO_USE_APPLICATION
-    /* Execute optional additional application code */
+    /* Execute optional external application code */
     app_programEnd();
 #endif
 
@@ -808,8 +812,8 @@ static void* rt_thread(void* arg) {
 #endif
 
 #ifdef CO_USE_APPLICATION
-        /* Execute optional additional application code */
-        app_programRt(!CO->nodeIdUnconfigured, epRT.timeDifference_us);
+        /* Execute optional external application code */
+        app_programRt(CO, epRT.timeDifference_us);
 #endif
 
     }

@@ -1,14 +1,13 @@
 /*
- * Client socket command interface for CANopenSocket.
+ * Client socket interface to CANopenNode ASCII command interface.
  *
  * @file        cocomm.c
  * @author      Janez Paternoster
  * @copyright   2020 Janez Paternoster
  *
- * This file is part of CANopenSocket, a Linux implementation of CANopen
- * stack with master functionality. Project home page is
- * <https://github.com/CANopenNode/CANopenSocket>. CANopenSocket is based
- * on CANopenNode: <https://github.com/CANopenNode/CANopenNode>.
+ * This file is part of CANopenNode, an opensource CANopen Stack.
+ * Project home page is <https://github.com/CANopenNode/CANopenNode>.
+ * For more information on CANopen see <http://www.can-cia.org/>.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +61,7 @@ fprintf(errStream,
 "Options:\n"
 "  -f <input file>  Path to the input file.\n"
 "  -s <socket path> Path to the unix socket. If not specified, path is obtained\n"
-"                   from  environmental variable, configured with:\n"
+"                   from environmental variable, configured with:\n"
 "                   'export cocomm_socket=<socket path>'. If latter is not\n"
 "                   specified, default value is used: '/tmp/CO_command_socket'.\n"
 "  -t <host>        Connect via tcp to remote <host>. Set also with\n"
@@ -85,7 +84,7 @@ fprintf(errStream,
 "\n"
 "For help on command strings type '%s \"help\"'.\n"
 "\n"
-"See also: https://github.com/CANopenNode/CANopenSocket\n"
+"See also: https://github.com/CANopenNode/CANopenLinux\n"
 "\n", progName, progName);
 }
 
@@ -244,7 +243,9 @@ int main (int argc, char *argv[]) {
         }
     }
     if ((env = getenv("cocomm_candump")) != NULL) {
-        candump = env;
+        if (strlen(env) > 0) {
+            candump = env;
+        }
     }
     if ((env = getenv("cocomm_candump_count")) != NULL) {
         candumpCount = atol(env);
@@ -392,6 +393,10 @@ int main (int argc, char *argv[]) {
         memset(&sockAddr, 0, sizeof(sockAddr));
         sockAddr.can_family = AF_CAN;
         sockAddr.can_ifindex = if_nametoindex(candump);
+        if (sockAddr.can_ifindex == 0) {
+            perror(candump);
+            exit(EXIT_FAILURE);
+        }
         int ret = bind(fd_candump, (struct sockaddr*)&sockAddr, sizeof(sockAddr));
         if (ret < 0) {
             fprintf(stderr, "CAN Socket binding failed \"%s\": ", candump);

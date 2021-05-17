@@ -36,10 +36,12 @@ extern "C" {
 
 /**
  * @defgroup CO_storageLinux Data storage with Linux
+ * Data initialize, store and restore functions with Linux.
+ *
  * @ingroup CO_socketCAN
  * @{
  *
- * Data initialize, store and restore functions with Linux, see @ref CO_storage
+ * See also @ref CO_storage.
  */
 
 

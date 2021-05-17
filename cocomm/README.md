@@ -6,15 +6,17 @@ Client socket interface to CANopenNode ASCII command interface
 
 Compile and install
 -------------------
+
     cd cocomm
     make
     sudo make install
 
-This will compile the `cocomm` utility and copy it to the /usr/bin/ directory.
+This will compile the `cocomm` utility and copy it to the `/usr/bin/` directory.
 
 
 Example usage
 -------------
+
     cocomm --help
     cocomm "help"
     cocomm "help datatype"
@@ -43,7 +45,7 @@ Then make `cocomm` use that file:
 
 Program writes data to stdout and messages in green or red color to stderr.
 
-For more examples see [CANopenSocket](https://github.com/CANopenNode/CANopenSocket).
+For more examples see [CANopenDemo](https://github.com/CANopenNode/CANopenDemo).
 
 
 Background about communication paths, when using cocomm

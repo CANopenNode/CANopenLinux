@@ -41,10 +41,9 @@ extern "C" {
 
 /**
  * @defgroup CO_socketCAN socketCAN
- * @{
- *
  * Linux specific interface to CANopenNode.
  *
+ * @{
  * Linux includes CAN interface inside its kernel, so called SocketCAN. It
  * operates as a network device. For more information on Linux SocketCAN see
  * https://www.kernel.org/doc/html/latest/networking/can.html
@@ -65,11 +64,10 @@ extern "C" {
 
 /**
  * @defgroup CO_epoll_interface Epoll interface
- * @ingroup CO_socketCAN
- * @{
- *
  * Linux epoll interface to CANopenNode.
  *
+ * @ingroup CO_socketCAN
+ * @{
  * The Linux epoll API performs a monitoring multiple file descriptors to see
  * if I/O is possible on any of them.
  *

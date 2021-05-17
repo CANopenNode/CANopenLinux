@@ -1,4 +1,4 @@
-CANopenLinux
+CANopenLinux                                               {#readmeCANopenLinux}
 ============
 
 CANopenLinux is a CANopen stack running on Linux devices.
@@ -6,6 +6,8 @@ CANopenLinux is a CANopen stack running on Linux devices.
 It is based on [CANopenNode](https://github.com/CANopenNode/CANopenNode), which is free and open source CANopen Stack and is included as a git submodule.
 
 CANopen is the internationally standardized (EN 50325-4) ([CiA301](http://can-cia.org/standardization/technical-documents)) CAN-based higher-layer protocol for embedded control system. For more information on CANopen see http://www.can-cia.org/.
+
+CANopenLinux homepage is https://github.com/CANopenNode/CANopenLinux
 
 
 Getting or updating the project
@@ -28,7 +30,7 @@ Usage
 -----
 Support for CAN interface is part of the Linux kernel, so called [SocketCAN](https://en.wikipedia.org/wiki/SocketCAN). CANopenNode runs on top of SocketCAN, so it should be able to run on any Linux machine, it depends on configuration of the kernel. Examples below was tested on Debian based machines, including Ubuntu and Raspberry PI. It is possible to run tests described below without real CAN interface, because Linux kernel already contains virtual CAN interface.
 
-Windows or Mac users, who don't have Linux installed, can use [VirtualBox](https://www.virtualbox.org/) and install [Ubuntu](https://ubuntu.com/download/desktop) or similar.
+Windows or Mac users, who don't have Linux installed, can use [VirtualBox](https://www.virtualbox.org/) and install [Ubuntu](https://ubuntu.com/download/desktop) or similar. To get confortable you may like to enroll [Introduction to Linux](https://training.linuxfoundation.org/training/introduction-to-linux/).
 
 
 ### CAN interfaces
@@ -67,22 +69,26 @@ In own terminal run candump to display all CAN messages with timestamp:
 ### Running CANopenLinux device
 Compile:
 
-    cd CANopenNode
+    cd CANopenLinux
     make
+
+Install (copy `canopend` application to the `/usr/bin/` directory):
+
+    sudo make install
 
 Display options:
 
-    ./canopend --help
+    canopend --help
 
 Run on can0 device with CANopen NodeID = 4:
 
-    ./canopend can0 -i 4
+    canopend can0 -i 4
 
 If NodeID is not specified, then CANopen LSS protocol may be used. Program can be finished by pressing Ctrl+c or with CANopen reset node command.
 
 After connecting the CANopen Linux device into the CAN(open) network, bootup message is visible. By default device uses Object Dictionary from `CANopenNode/example`, which contains only communication parameters. With the external CANopen tool all parameters can be accessed and CANopen Linux device can be configured (For example write heartbeat producer time in object 0x1017,0).
 
-When CANopen Linux device is first connected to the CANopen network it shows bootup message and emergency message, because are missing storage files. To avoid emergency message it is necessary to trigger saveAll command (write correct code into parameter 0x1010,1 with SDO command) and restart the program.
+When CANopen Linux device is first connected to the CANopen network it shows bootup message and emergency message, because of missing storage files. To avoid emergency message it is necessary to trigger saveAll command (write correct code into parameter 0x1010,1 with SDO command) and restart the program.
 
 Note also, if there are multiple instances of canopend running from the same directory, storage path should be specified for each.
 
@@ -92,17 +98,17 @@ CANopenNode includes CANopen ASCII command interface (gateway) specified by stan
 
 To use ASCII command interface on canopend directly just run it with `-c "stdio"` and type the commands followed by enter in it.
 
-    ./canopend can0 -i 1 -c "stdio"
+    canopend can0 -i 1 -c "stdio"
     help
     1 write 0x1010 1 vs save
     1 reset node
 
 To create CANopen Linux commander device on local socket run:
 
-    ./canopend can0 -i 1 -c "local-/tmp/CO_command_socket"
+    canopend can0 -i 1 -c "local-/tmp/CO_command_socket"
 
 #### cocomm
-CANopenLinux/cocomm directory contains a small command line program, which establishes socket connection with `canopend` (CANopen Linux commander device). It sends standardized CANopen commands (CiA309-3) to gateway and prints the responses to stdout and stderr. See [cocomm/cocomm.md](cocomm/cocomm.md) for usage.
+CANopenLinux/cocomm directory contains a small command line program, which establishes socket connection with `canopend` (CANopen Linux commander device). It sends standardized CANopen commands (CiA309-3) to gateway and prints the responses to stdout and stderr. See [cocomm/README.md](cocomm/README.md) for usage.
 
 
 Creating new project
@@ -111,10 +117,16 @@ Creating new project
 
 New project can be started in new directory simply by adding customized makefile, custom Object Dictionary OD.h/c files and custom application source files in Arduino style, which are called from CO_main_basic.c file.
 
-See [CANopenSocket](https://github.com/CANopenNode/CANopenSocket) for demo.
+### Single or multi threaded application
+By default canopend runs in single thread (CO_SINGLE_THREAD option in Makefile). Different events, such as can reception or timer expiration trigger looping through the stack (all code is non-blocking). It requires less system resources.
+
+In multi threaded operation a real-time thread is established besides mainline thread. RT thread runs each millisecond and processes PDOs and optional application code with peripheral read/write, control program or similar. With this configuration race conditions must be taken into account, for example application code running from mainline thread must use CO_(UN)LOCK_OD macros when accessing OD variables.
+
+See also [CANopenDemo](https://github.com/CANopenNode/CANopenDemo) for examples.
 
 
-### Create new project with [KDevelop](https://www.kdevelop.org/)
+### Create new project with KDevelop
+- https://www.kdevelop.org/
 - `sudo apt install kdevelop breeze`
 - Run KDevelop, select: Project -> open project
 - Navigate to project directory and click open.
@@ -127,7 +139,7 @@ See [CANopenSocket](https://github.com/CANopenNode/CANopenSocket) for demo.
     - `<path_to_project_files>`
   - Language support, Defines, add:
     - `CO_DRIVER_CUSTOM`
-- Run -> Setup launches -> basicDevice:
+- Run -> Setup launches -> `our_program`:
   - Add Executable file and name it.
   - Executable file: `<select_executable>`
   - Arguments: `can0 -i 4`
