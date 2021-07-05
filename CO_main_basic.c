@@ -436,7 +436,29 @@ int main (int argc, char *argv[]) {
 
     /* Allocate memory for CANopen objects */
     uint32_t heapMemoryUsed = 0;
-    CO = CO_new(NULL, &heapMemoryUsed);
+    CO_config_t *config_ptr = NULL;
+#ifdef CO_MULTIPLE_OD
+    /* example usage of CO_MULTIPLE_OD (but still single OD here) */
+    CO_config_t co_config = {0};
+    OD_INIT_CONFIG(co_config); /* helper macro from OD.h */
+#if (CO_CONFIG_LEDS) & CO_CONFIG_LEDS_ENABLE
+    co_config.CNT_LEDS = 1;
+#endif
+#if (CO_CONFIG_LSS) & CO_CONFIG_LSS_SLAVE
+    co_config.CNT_LSS_SLV = 1;
+#endif
+#if (CO_CONFIG_LSS) & CO_CONFIG_LSS_MASTER
+    co_config.CNT_LSS_MST = 1;
+#endif
+#if (CO_CONFIG_GTW) & CO_CONFIG_GTW_ASCII
+    co_config.CNT_GTWA = 1;
+#endif
+#if (CO_CONFIG_TRACE) & CO_CONFIG_TRACE_ENABLE
+    co_config.CNT_TRACE = 1;
+#endif
+    config_ptr = &co_config;
+#endif /* CO_MULTIPLE_OD */
+    CO = CO_new(config_ptr, &heapMemoryUsed);
     if (CO == NULL) {
         log_printf(LOG_CRIT, DBG_GENERAL,
                    "CO_new(), heapMemoryUsed=", heapMemoryUsed);
