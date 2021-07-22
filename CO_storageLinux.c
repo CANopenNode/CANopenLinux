@@ -215,7 +215,7 @@ CO_ReturnError_t CO_storageLinux_init(CO_storage_t *storage,
             ret = CO_ERROR_DATA_CORRUPT;
         }
         else {
-            buf = malloc(entry->len + 4);
+            buf = malloc(entry->len + sizeof(uint16_t));
             if (buf == NULL) {
                 fclose(fp);
                 *storageInitError = i;
@@ -225,7 +225,7 @@ CO_ReturnError_t CO_storageLinux_init(CO_storage_t *storage,
 
         /* Read data into temporary buffer first. Then verify and copy to addr*/
         if (!dataCorrupt) {
-            size_t cnt = fread(buf, 1, entry->len + 4, fp);
+            size_t cnt = fread(buf, 1, entry->len + sizeof(uint16_t), fp);
 
             /* If file is empty, just skip loading, default values will be used,
              * no error. Otherwise verify length and crc and copy data. */
