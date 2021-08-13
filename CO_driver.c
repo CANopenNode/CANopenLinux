@@ -277,7 +277,7 @@ CO_ReturnError_t CO_CANmodule_addInterface(CO_CANmodule_t *CANmodule,
     socklen_t sLen;
     CO_CANinterface_t *interface;
     struct sockaddr_can sockAddr;
-    struct epoll_event ev;
+    struct epoll_event ev = {0};
 #if CO_DRIVER_ERROR_REPORTING > 0
     can_err_mask_t err_mask;
 #endif

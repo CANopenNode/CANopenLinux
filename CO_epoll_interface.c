@@ -67,7 +67,7 @@ static inline uint64_t clock_gettime_us(void) {
 
 CO_ReturnError_t CO_epoll_create(CO_epoll_t *ep, uint32_t timerInterval_us) {
     int ret;
-    struct epoll_event ev;
+    struct epoll_event ev = {0};
 
     if (ep == NULL) {
         return CO_ERROR_ILLEGAL_ARGUMENT;
@@ -381,7 +381,7 @@ static size_t gtwa_write_response(void *object,
 }
 
 static inline void socetAcceptEnableForEpoll(CO_epoll_gtw_t *epGtw) {
-    struct epoll_event ev;
+    struct epoll_event ev = {0};
     int ret;
 
     ev.events = EPOLLIN | EPOLLONESHOT;
@@ -399,7 +399,7 @@ CO_ReturnError_t CO_epoll_createGtw(CO_epoll_gtw_t *epGtw,
                                     char *localSocketPath)
 {
     int ret;
-    struct epoll_event ev;
+    struct epoll_event ev = {0};
 
     if (epGtw == NULL || epoll_fd < 0) {
         return CO_ERROR_ILLEGAL_ARGUMENT;
@@ -589,7 +589,7 @@ void CO_epoll_processGtw(CO_epoll_gtw_t *epGtw,
             }
             else {
                 /* add fd to epoll */
-                struct epoll_event ev2;
+                struct epoll_event ev2 = {0};
                 ev2.events = EPOLLIN;
                 ev2.data.fd = epGtw->gtwa_fd;
                 int ret = epoll_ctl(ep->epoll_fd,
