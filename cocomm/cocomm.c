@@ -427,7 +427,8 @@ int main (int argc, char *argv[]) {
 
         while(fgets(commBuf, BUF_SIZE, fp) != NULL) {
             size_t len = strlen(commBuf);
-            if (len < 1) continue;
+            if (len < 2) continue; // Sort out lines like "\n".
+            if (commBuf[0] == '#') continue; // Sort out lines starting with '#'.
 
             // send command
             if (write(fd_gtw, commBuf, len) != len) { /* blocking function */
