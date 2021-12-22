@@ -429,6 +429,22 @@ int main (int argc, char *argv[]) {
             size_t len = strlen(commBuf);
             if (len < 2) continue; // Sort out lines like "\n".
             if (commBuf[0] == '#') continue; // Sort out lines starting with '#'.
+            if (commBuf[0] == 'P') {
+                // Pause script execution for given time [ms] in case line starts with 'P' followed by an unsigned integer.
+                uint32_t millis = 1;
+                uint8_t p = '\0';
+                uint32_t result = sscanf(commBuf, "%c %u", &p, &millis);
+                fprintf(errStream, "result = %u\n", result);
+                if (2 != result) {
+                    fprintf(errStream, "syntax error on 'P'ause command\n");
+                    fflush(errStream);
+                    exit(EXIT_FAILURE);
+                }
+                fprintf(stdout, "pause %u msec...\n", millis);
+                fflush(stdout);
+                usleep(millis * 1000);
+                continue;
+            }
 
             // send command
             if (write(fd_gtw, commBuf, len) != len) { /* blocking function */
