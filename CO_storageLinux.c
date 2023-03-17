@@ -110,8 +110,10 @@ static ODR_t storeLinux(CO_storage_entry_t *entry, CO_CANmodule_t *CANmodule) {
         }
     }
 
-    free(filename_tmp);
-    free(filename_old);
+    if (ret != ODR_OUT_OF_MEM) {
+        free(filename_tmp);
+        free(filename_old);
+    }
 
     return ret;
 }
