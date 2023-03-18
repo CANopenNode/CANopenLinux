@@ -110,6 +110,26 @@ To create CANopen Linux commander device on local socket run:
 #### cocomm
 CANopenLinux/cocomm directory contains a small command line program, which establishes socket connection with `canopend` (CANopen Linux commander device). It sends standardized CANopen commands (CiA309-3) to gateway and prints the responses to stdout and stderr. See [cocomm/README.md](cocomm/README.md) for usage.
 
+#### Accessing ASCII command interface with Python
+Here is an example of simplified Python program, which works similar as `cocomm` described above (`canoped` serves on local socket). Run the program and type `1 r 0x1018 0 u16` for example.
+
+```python
+import socket, os
+
+if os.path.exists("/tmp/CO_command_socket"):
+    client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    client.connect("/tmp/CO_command_socket")
+    while True:
+        x = "[1] " + input("> ") + "\r\n"
+        if "" != x:
+            print("SEND:", x.encode("utf-8"))
+            client.send(x.encode("utf-8"))
+            print("RECEIVE:", client.recv(1024))
+    client.close()
+else:
+    print("Couldn't Connect!")
+```
+
 
 Creating new project
 --------------------
