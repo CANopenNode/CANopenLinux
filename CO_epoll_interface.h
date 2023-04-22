@@ -237,7 +237,7 @@ typedef struct {
     /** Socket timeout timer in microseconds */
     uint32_t socketTimeoutTmr_us;
     /** Path in case of local socket */
-    char *localSocketPath;
+    const char *localSocketPath;
     /** Gateway socket file descriptor */
     int gtwa_fdSocket;
     /** Gateway io stream file descriptor */
@@ -265,7 +265,7 @@ CO_ReturnError_t CO_epoll_createGtw(CO_epoll_gtw_t *epGtw,
                                     int epoll_fd,
                                     int32_t commandInterface,
                                     uint32_t socketTimeout_ms,
-                                    char *localSocketPath);
+                                    const char *localSocketPath);
 
 /**
  * Close gateway-ascii sockets
