@@ -889,9 +889,9 @@ static int32_t CO_CANrxMsg(                 /* return index of received message 
     CO_CANrx_t *rcvMsgObj = NULL; /* receive message object from CO_CANmodule_t object. */
     bool_t msgMatched = false;
 
-    /* CANopenNode can message is binary compatible to the socketCAN one, except
-     * for extension flags */
-    msg->can_id &= CAN_EFF_MASK;
+    /* CANopenNode can message is binary compatible to the socketCAN one,
+     * including the extension flags */
+    // msg->can_id &= CAN_EFF_MASK;
     rcvMsg = (CO_CANrxMsg_t *)msg;
 
     /* Message has been received. Search rxArray from CANmodule for the
