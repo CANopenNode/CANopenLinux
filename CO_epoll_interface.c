@@ -396,7 +396,7 @@ CO_ReturnError_t CO_epoll_createGtw(CO_epoll_gtw_t *epGtw,
                                     int epoll_fd,
                                     int32_t commandInterface,
                                     uint32_t socketTimeout_ms,
-                                    char *localSocketPath)
+                                    const char *localSocketPath)
 {
     int ret;
     struct epoll_event ev = {0};
