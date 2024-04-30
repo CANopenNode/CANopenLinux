@@ -166,7 +166,7 @@ static CO_ReturnError_t setRxFilters(CO_CANmodule_t *CANmodule)
         }
     } else {
         retval = CO_ERROR_NO;
-            for (i = 0; i < CANmodule->CANinterfaceCount; i ++) {
+        for (i = 0; i < CANmodule->CANinterfaceCount; i ++) {
             int ret = setsockopt(CANmodule->CANinterfaces[i].fd, SOL_CAN_RAW, CAN_RAW_FILTER,
                             rxFiltersCpy, sizeof(struct can_filter) * count);
             if(ret < 0){
