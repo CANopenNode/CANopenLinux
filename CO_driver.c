@@ -149,18 +149,33 @@ static CO_ReturnError_t setRxFilters(CO_CANmodule_t *CANmodule)
     if (count == 0) {
         /* No filter is set, disable RX */
         return disableRx(CANmodule);
-    }
+    } else if (count > CAN_RAW_FILTER_MAX) {
+        /* Too many filters for the hardware to handle, filtering will be done in software. */
+        struct can_filter passAllFilter = { .can_id = 0, .can_mask = 0 };
 
-    retval = CO_ERROR_NO;
-    for (i = 0; i < CANmodule->CANinterfaceCount; i ++) {
-      int ret = setsockopt(CANmodule->CANinterfaces[i].fd, SOL_CAN_RAW, CAN_RAW_FILTER,
-                       rxFiltersCpy, sizeof(struct can_filter) * count);
-      if(ret < 0){
-          log_printf(LOG_ERR, CAN_FILTER_FAILED,
-                     CANmodule->CANinterfaces[i].ifName);
-          log_printf(LOG_DEBUG, DBG_ERRNO, "setsockopt()");
-          retval = CO_ERROR_SYSCALL;
-      }
+        retval = CO_ERROR_NO;
+        for (i = 0; i < CANmodule->CANinterfaceCount; i ++) {
+            int ret = setsockopt(CANmodule->CANinterfaces[i].fd, SOL_CAN_RAW, CAN_RAW_FILTER,
+                            &passAllFilter, sizeof(struct can_filter));
+            if(ret < 0){
+                log_printf(LOG_ERR, CAN_FILTER_FAILED,
+                            CANmodule->CANinterfaces[i].ifName);
+                log_printf(LOG_DEBUG, DBG_ERRNO, "setsockopt()");
+                retval = CO_ERROR_SYSCALL;
+            }
+        }
+    } else {
+        retval = CO_ERROR_NO;
+        for (i = 0; i < CANmodule->CANinterfaceCount; i ++) {
+            int ret = setsockopt(CANmodule->CANinterfaces[i].fd, SOL_CAN_RAW, CAN_RAW_FILTER,
+                            rxFiltersCpy, sizeof(struct can_filter) * count);
+            if(ret < 0){
+                log_printf(LOG_ERR, CAN_FILTER_FAILED,
+                            CANmodule->CANinterfaces[i].ifName);
+                log_printf(LOG_DEBUG, DBG_ERRNO, "setsockopt()");
+                retval = CO_ERROR_SYSCALL;
+            }
+        }
     }
 
     return retval;
