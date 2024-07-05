@@ -380,7 +380,7 @@ static size_t gtwa_write_response(void *object,
     return nWritten;
 }
 
-static inline void socetAcceptEnableForEpoll(CO_epoll_gtw_t *epGtw) {
+static inline void socketAcceptEnableForEpoll(CO_epoll_gtw_t *epGtw) {
     struct epoll_event ev = {0};
     int ret;
 
@@ -602,7 +602,7 @@ void CO_epoll_processGtw(CO_epoll_gtw_t *epGtw,
             }
 
             if (fail) {
-                socetAcceptEnableForEpoll(epGtw);
+                socketAcceptEnableForEpoll(epGtw);
             }
             ep->epoll_new = false;
         }
@@ -652,7 +652,7 @@ void CO_epoll_processGtw(CO_epoll_gtw_t *epGtw,
                             log_printf(LOG_CRIT, DBG_ERRNO, "close(gtwa_fd)");
                         }
                         epGtw->gtwa_fd = -1;
-                        socetAcceptEnableForEpoll(epGtw);
+                        socketAcceptEnableForEpoll(epGtw);
                     }
                     else {
                         CO_GTWA_write(co->gtwa, buf, s);
@@ -688,7 +688,7 @@ void CO_epoll_processGtw(CO_epoll_gtw_t *epGtw,
                 log_printf(LOG_CRIT, DBG_ERRNO, "close(gtwa_fd), tmo");
             }
             epGtw->gtwa_fd = -1;
-            socetAcceptEnableForEpoll(epGtw);
+            socketAcceptEnableForEpoll(epGtw);
         }
         else {
             epGtw->socketTimeoutTmr_us += ep->timeDifference_us;
