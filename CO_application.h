@@ -28,17 +28,16 @@ extern "C" {
 #endif
 
 /**
- * @defgroup CO_applicationLinux Application interface to CANopenNode
- * Application interface, similar to Arduino, extended to CANopen and
- * additional, realtime thread.
+ * @defgroup CO_applicationLinux Application interface to CANopenNode Application interface, similar to Arduino,
+ * extended to CANopen and additional, realtime thread.
  *
  * @ingroup CO_socketCAN
  * @{
  */
 
 /**
- * Function is called once on the program startup, after Object dictionary
- * initialization and before CANopen initialization.
+ * Function is called once on the program startup, after Object dictionary initialization and before CANopen
+ * initialization.
  *
  * @param [in,out] bitRate Stored CAN bit rate, can be overridden.
  * @param [in,out] nodeId Stored CANopen NodeId, can be overridden.
@@ -46,24 +45,19 @@ extern "C" {
  *
  * @return @ref CO_ReturnError_t CO_ERROR_NO in case of success.
  */
-CO_ReturnError_t app_programStart(uint16_t *bitRate,
-                                  uint8_t *nodeId,
-                                  uint32_t *errInfo);
-
+CO_ReturnError_t app_programStart(uint16_t* bitRate, uint8_t* nodeId, uint32_t* errInfo);
 
 /**
  * Function is called after CANopen communication reset.
  *
  * @param co CANopen object.
  */
-void app_communicationReset(CO_t *co);
-
+void app_communicationReset(CO_t* co);
 
 /**
  * Function is called just before program ends.
  */
 void app_programEnd();
-
 
 /**
  * Function is called cyclically from main().
@@ -71,27 +65,24 @@ void app_programEnd();
  * Place for the slower code (all must be non-blocking).
  *
  * @warning
- * Mind race conditions between this functions and app_programRt(), which
- * run from the realtime thread. If accessing Object dictionary variable which
- * is also mappable to PDO, it is necessary to use CO_LOCK_OD() and
- * CO_UNLOCK_OD() macros from @ref CO_critical_sections.
+ * Mind race conditions between this functions and app_programRt(), which run from the realtime thread. If accessing
+ * Object dictionary variable which is also mappable to PDO, it is necessary to use CO_LOCK_OD() and CO_UNLOCK_OD()
+ * macros from @ref CO_critical_sections.
  *
  * @param co CANopen object.
  * @param timer1usDiff Time difference since last call in microseconds
  */
-void app_programAsync(CO_t *co, uint32_t timer1usDiff);
-
+void app_programAsync(CO_t* co, uint32_t timer1usDiff);
 
 /**
  * Function is called cyclically from realtime thread at constant intervals.
  *
- * Code inside this function must be executed fast. Take care on race conditions
- * with app_programAsync.
+ * Code inside this function must be executed fast. Take care on race conditions with app_programAsync.
  *
  * @param co CANopen object.
  * @param timer1usDiff Time difference since last call in microseconds
  */
-void app_programRt(CO_t *co, uint32_t timer1usDiff);
+void app_programRt(CO_t* co, uint32_t timer1usDiff);
 
 /** @} */ /* CO_applicationLinux */
 
