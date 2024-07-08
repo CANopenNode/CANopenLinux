@@ -50,17 +50,18 @@
 #define CANSEND_DELAY_US 100
 #endif
 
-
 /* EPOLL **********************************************************************/
 /* Helper function - get monotonic clock time in microseconds */
-static inline uint64_t clock_gettime_us(void) {
+static inline uint64_t
+clock_gettime_us(void) {
     struct timespec ts;
 
     (void)clock_gettime(CLOCK_MONOTONIC, &ts);
     return ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 }
 
-CO_ReturnError_t CO_epoll_create(CO_epoll_t *ep, uint32_t timerInterval_us) {
+CO_ReturnError_t
+CO_epoll_create(CO_epoll_t* ep, uint32_t timerInterval_us) {
     int ret;
     struct epoll_event ev = {0};
 
@@ -119,7 +120,8 @@ CO_ReturnError_t CO_epoll_create(CO_epoll_t *ep, uint32_t timerInterval_us) {
     return CO_ERROR_NO;
 }
 
-void CO_epoll_close(CO_epoll_t *ep) {
+void
+CO_epoll_close(CO_epoll_t* ep) {
     if (ep == NULL) {
         return;
     }
@@ -134,8 +136,8 @@ void CO_epoll_close(CO_epoll_t *ep) {
     ep->timer_fd = -1;
 }
 
-
-void CO_epoll_wait(CO_epoll_t *ep) {
+void
+CO_epoll_wait(CO_epoll_t* ep) {
     if (ep == NULL) {
         return;
     }
@@ -156,24 +158,17 @@ void CO_epoll_wait(CO_epoll_t *ep) {
     if (ready != 1 && errno == EINTR) {
         /* event from interrupt or signal, nothing to process, continue */
         ep->epoll_new = false;
-    }
-    else if (ready != 1) {
+    } else if (ready != 1) {
         log_printf(LOG_DEBUG, DBG_ERRNO, "epoll_wait");
         ep->epoll_new = false;
-    }
-    else if ((ep->ev.events & EPOLLIN) != 0
-             && ep->ev.data.fd == ep->event_fd
-    ) {
+    } else if ((ep->ev.events & EPOLLIN) != 0 && ep->ev.data.fd == ep->event_fd) {
         uint64_t val;
         ssize_t s = read(ep->event_fd, &val, sizeof(uint64_t));
         if (s != sizeof(uint64_t)) {
             log_printf(LOG_DEBUG, DBG_ERRNO, "read(event_fd)");
         }
         ep->epoll_new = false;
-    }
-    else if ((ep->ev.events & EPOLLIN) != 0
-             && ep->ev.data.fd == ep->timer_fd
-    ) {
+    } else if ((ep->ev.events & EPOLLIN) != 0 && ep->ev.data.fd == ep->timer_fd) {
         uint64_t val;
         ssize_t s = read(ep->timer_fd, &val, sizeof(uint64_t));
         if (s != sizeof(uint64_t) && errno != EAGAIN) {
@@ -184,14 +179,14 @@ void CO_epoll_wait(CO_epoll_t *ep) {
     }
 }
 
-void CO_epoll_processLast(CO_epoll_t *ep) {
+void
+CO_epoll_processLast(CO_epoll_t* ep) {
     if (ep == NULL) {
         return;
     }
 
     if (ep->epoll_new) {
-        log_printf(LOG_DEBUG, DBG_EPOLL_UNKNOWN,
-                   ep->ev.events, ep->ev.data.fd);
+        log_printf(LOG_DEBUG, DBG_EPOLL_UNKNOWN, ep->ev.events, ep->ev.data.fd);
         ep->epoll_new = false;
     }
 
@@ -201,11 +196,9 @@ void CO_epoll_processLast(CO_epoll_t *ep) {
         ep->timerNext_us += 1;
         if (ep->timerInterval_us < 1000000) {
             ep->tm.it_value.tv_nsec = ep->timerNext_us * 1000;
-        }
-        else {
+        } else {
             ep->tm.it_value.tv_sec = ep->timerNext_us / 1000000;
-            ep->tm.it_value.tv_nsec =
-                                    (ep->timerNext_us % 1000000) * 1000;
+            ep->tm.it_value.tv_nsec = (ep->timerNext_us % 1000000) * 1000;
         }
         int ret = timerfd_settime(ep->timer_fd, 0, &ep->tm, NULL);
         if (ret < 0) {
@@ -214,12 +207,12 @@ void CO_epoll_processLast(CO_epoll_t *ep) {
     }
 }
 
-
 /* MAINLINE *******************************************************************/
 #ifndef CO_SINGLE_THREAD
 /* Send event to wake CO_epoll_processMain() */
-static void wakeupCallback(void *object) {
-    CO_epoll_t *ep = (CO_epoll_t *)object;
+static void
+wakeupCallback(void* object) {
+    CO_epoll_t* ep = (CO_epoll_t*)object;
     uint64_t u = 1;
     ssize_t s;
     s = write(ep->event_fd, &u, sizeof(uint64_t));
@@ -229,7 +222,8 @@ static void wakeupCallback(void *object) {
 }
 #endif
 
-void CO_epoll_initCANopenMain(CO_epoll_t *ep, CO_t *co) {
+void
+CO_epoll_initCANopenMain(CO_epoll_t* ep, CO_t* co) {
     if (ep == NULL || co == NULL) {
         return;
     }
@@ -237,66 +231,52 @@ void CO_epoll_initCANopenMain(CO_epoll_t *ep, CO_t *co) {
 #ifndef CO_SINGLE_THREAD
 
     /* Configure LSS slave callback function */
- #if (CO_CONFIG_LSS) & CO_CONFIG_FLAG_CALLBACK_PRE
-  #if (CO_CONFIG_LSS) & CO_CONFIG_LSS_SLAVE
-    CO_LSSslave_initCallbackPre(co->LSSslave,
-                                (void *)ep, wakeupCallback);
-  #endif
- #endif
+#if (CO_CONFIG_LSS) & CO_CONFIG_FLAG_CALLBACK_PRE
+#if (CO_CONFIG_LSS) & CO_CONFIG_LSS_SLAVE
+    CO_LSSslave_initCallbackPre(co->LSSslave, (void*)ep, wakeupCallback);
+#endif
+#endif
 
     if (co->nodeIdUnconfigured) {
         return;
     }
 
     /* Configure callback functions */
- #if (CO_CONFIG_NMT) & CO_CONFIG_FLAG_CALLBACK_PRE
-    CO_NMT_initCallbackPre(co->NMT,
-                           (void *)ep, wakeupCallback);
- #endif
- #if (CO_CONFIG_HB_CONS) & CO_CONFIG_FLAG_CALLBACK_PRE
-    CO_HBconsumer_initCallbackPre(co->HBcons,
-                                  (void *)ep, wakeupCallback);
- #endif
- #if (CO_CONFIG_EM) & CO_CONFIG_FLAG_CALLBACK_PRE
-    CO_EM_initCallbackPre(co->em,
-                          (void *)ep, wakeupCallback);
- #endif
- #if (CO_CONFIG_SDO_SRV) & CO_CONFIG_FLAG_CALLBACK_PRE
-    CO_SDOserver_initCallbackPre(&co->SDOserver[0],
-                                 (void *)ep, wakeupCallback);
- #endif
- #if (CO_CONFIG_SDO_CLI) & CO_CONFIG_FLAG_CALLBACK_PRE
-    CO_SDOclient_initCallbackPre(&co->SDOclient[0],
-                                 (void *)ep, wakeupCallback);
- #endif
- #if (CO_CONFIG_TIME) & CO_CONFIG_FLAG_CALLBACK_PRE
-    CO_TIME_initCallbackPre(co->TIME,
-                            (void *)ep, wakeupCallback);
- #endif
- #if (CO_CONFIG_LSS) & CO_CONFIG_FLAG_CALLBACK_PRE
-  #if (CO_CONFIG_LSS) & CO_CONFIG_LSS_MASTER
-    CO_LSSmaster_initCallbackPre(co->LSSmaster,
-                                 (void *)ep, wakeupCallback);
-  #endif
- #endif
+#if (CO_CONFIG_NMT) & CO_CONFIG_FLAG_CALLBACK_PRE
+    CO_NMT_initCallbackPre(co->NMT, (void*)ep, wakeupCallback);
+#endif
+#if (CO_CONFIG_HB_CONS) & CO_CONFIG_FLAG_CALLBACK_PRE
+    CO_HBconsumer_initCallbackPre(co->HBcons, (void*)ep, wakeupCallback);
+#endif
+#if (CO_CONFIG_EM) & CO_CONFIG_FLAG_CALLBACK_PRE
+    CO_EM_initCallbackPre(co->em, (void*)ep, wakeupCallback);
+#endif
+#if (CO_CONFIG_SDO_SRV) & CO_CONFIG_FLAG_CALLBACK_PRE
+    CO_SDOserver_initCallbackPre(&co->SDOserver[0], (void*)ep, wakeupCallback);
+#endif
+#if (CO_CONFIG_SDO_CLI) & CO_CONFIG_FLAG_CALLBACK_PRE
+    CO_SDOclient_initCallbackPre(&co->SDOclient[0], (void*)ep, wakeupCallback);
+#endif
+#if (CO_CONFIG_TIME) & CO_CONFIG_FLAG_CALLBACK_PRE
+    CO_TIME_initCallbackPre(co->TIME, (void*)ep, wakeupCallback);
+#endif
+#if (CO_CONFIG_LSS) & CO_CONFIG_FLAG_CALLBACK_PRE
+#if (CO_CONFIG_LSS) & CO_CONFIG_LSS_MASTER
+    CO_LSSmaster_initCallbackPre(co->LSSmaster, (void*)ep, wakeupCallback);
+#endif
+#endif
 
 #endif /* CO_SINGLE_THREAD */
 }
 
-void CO_epoll_processMain(CO_epoll_t *ep,
-                          CO_t *co,
-                          bool_t enableGateway,
-                          CO_NMT_reset_cmd_t *reset)
-{
+void
+CO_epoll_processMain(CO_epoll_t* ep, CO_t* co, bool_t enableGateway, CO_NMT_reset_cmd_t* reset) {
     if (ep == NULL || co == NULL || reset == NULL) {
         return;
     }
 
     /* process CANopen objects */
-    *reset = CO_process(co,
-                        enableGateway,
-                        ep->timeDifference_us,
-                        &ep->timerNext_us);
+    *reset = CO_process(co, enableGateway, ep->timeDifference_us, &ep->timerNext_us);
 
     /* If there are unsent CAN messages, call CO_CANmodule_process() earlier */
     if (co->CANmodule->CANtxCount > 0 && ep->timerNext_us > CANSEND_DELAY_US) {
@@ -304,12 +284,9 @@ void CO_epoll_processMain(CO_epoll_t *ep,
     }
 }
 
-
 /* CANrx and REALTIME *********************************************************/
-void CO_epoll_processRT(CO_epoll_t *ep,
-                        CO_t *co,
-                        bool_t realtime)
-{
+void
+CO_epoll_processRT(CO_epoll_t* ep, CO_t* co, bool_t realtime) {
     if (co == NULL || ep == NULL) {
         return;
     }
@@ -322,25 +299,23 @@ void CO_epoll_processRT(CO_epoll_t *ep,
     }
 
     if (!realtime || ep->timerEvent) {
-        uint32_t *pTimerNext_us = realtime ? NULL : &ep->timerNext_us;
+        uint32_t* pTimerNext_us = realtime ? NULL : &ep->timerNext_us;
 
         CO_LOCK_OD(co->CANmodule);
         if (!co->nodeIdUnconfigured && co->CANmodule->CANnormal) {
             bool_t syncWas = false;
 
 #if (CO_CONFIG_SYNC) & CO_CONFIG_SYNC_ENABLE
-            syncWas = CO_process_SYNC(co, ep->timeDifference_us,
-                                      pTimerNext_us);
+            syncWas = CO_process_SYNC(co, ep->timeDifference_us, pTimerNext_us);
 #endif
 #if (CO_CONFIG_PDO) & CO_CONFIG_RPDO_ENABLE
-            CO_process_RPDO(co, syncWas, ep->timeDifference_us,
-                            pTimerNext_us);
+            CO_process_RPDO(co, syncWas, ep->timeDifference_us, pTimerNext_us);
 #endif
 #if (CO_CONFIG_PDO) & CO_CONFIG_TPDO_ENABLE
-            CO_process_TPDO(co, syncWas, ep->timeDifference_us,
-                            pTimerNext_us);
+            CO_process_TPDO(co, syncWas, ep->timeDifference_us, pTimerNext_us);
 #endif
-            (void) syncWas; (void) pTimerNext_us;
+            (void)syncWas;
+            (void)pTimerNext_us;
         }
         CO_UNLOCK_OD(co->CANmodule);
     }
@@ -349,33 +324,29 @@ void CO_epoll_processRT(CO_epoll_t *ep,
 /* GATEWAY ********************************************************************/
 #if (CO_CONFIG_GTW) & CO_CONFIG_GTW_ASCII
 /* write response string from gateway-ascii object */
-static size_t gtwa_write_response(void *object,
-                                  const char *buf,
-                                  size_t count,
-                                  uint8_t *connectionOK)
-{
-    int* fd = (int *)object;
+static size_t
+gtwa_write_response(void* object, const char* buf, size_t count, uint8_t* connectionOK) {
+    int* fd = (int*)object;
     /* nWritten = count -> in case of error (non-existing fd) data are purged */
     size_t nWritten = count;
 
     if (fd != NULL && *fd >= 0) {
-        ssize_t n = write(*fd, (const void *)buf, count);
+        ssize_t n = write(*fd, (const void*)buf, count);
         if (n >= 0) {
             nWritten = (size_t)n;
-        }
-        else {
+        } else {
             /* probably EAGAIN - "Resource temporarily unavailable". Retry. */
             log_printf(LOG_DEBUG, DBG_ERRNO, "write(gtwa_response)");
             nWritten = 0;
         }
-    }
-    else {
+    } else {
         *connectionOK = 0;
     }
     return nWritten;
 }
 
-static inline void socetAcceptEnableForEpoll(CO_epoll_gtw_t *epGtw) {
+static inline void
+socetAcceptEnableForEpoll(CO_epoll_gtw_t* epGtw) {
     struct epoll_event ev = {0};
     int ret;
 
@@ -387,12 +358,9 @@ static inline void socetAcceptEnableForEpoll(CO_epoll_gtw_t *epGtw) {
     }
 }
 
-CO_ReturnError_t CO_epoll_createGtw(CO_epoll_gtw_t *epGtw,
-                                    int epoll_fd,
-                                    int32_t commandInterface,
-                                    uint32_t socketTimeout_ms,
-                                    char *localSocketPath)
-{
+CO_ReturnError_t
+CO_epoll_createGtw(CO_epoll_gtw_t* epGtw, int epoll_fd, int32_t commandInterface, uint32_t socketTimeout_ms,
+                   char* localSocketPath) {
     int ret;
     struct epoll_event ev = {0};
 
@@ -400,26 +368,24 @@ CO_ReturnError_t CO_epoll_createGtw(CO_epoll_gtw_t *epGtw,
         return CO_ERROR_ILLEGAL_ARGUMENT;
     }
 
-
     epGtw->epoll_fd = epoll_fd;
     epGtw->commandInterface = commandInterface;
 
-    epGtw->socketTimeout_us = (socketTimeout_ms < (UINT_MAX / 1000 - 1000000)) ?
-                              socketTimeout_ms * 1000 : (UINT_MAX - 1000000);
+    epGtw->socketTimeout_us = (socketTimeout_ms < (UINT_MAX / 1000 - 1000000)) ? socketTimeout_ms * 1000
+                                                                               : (UINT_MAX - 1000000);
     epGtw->gtwa_fdSocket = -1;
     epGtw->gtwa_fd = -1;
 
     if (commandInterface == CO_COMMAND_IF_STDIO) {
         epGtw->gtwa_fd = STDIN_FILENO;
         log_printf(LOG_INFO, DBG_COMMAND_STDIO_INFO);
-    }
-    else if (commandInterface == CO_COMMAND_IF_LOCAL_SOCKET) {
+    } else if (commandInterface == CO_COMMAND_IF_LOCAL_SOCKET) {
         struct sockaddr_un addr;
         epGtw->localSocketPath = localSocketPath;
 
         /* Create, bind and listen local socket */
         epGtw->gtwa_fdSocket = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
-        if(epGtw->gtwa_fdSocket < 0) {
+        if (epGtw->gtwa_fdSocket < 0) {
             log_printf(LOG_CRIT, DBG_ERRNO, "socket(local)");
             return CO_ERROR_SYSCALL;
         }
@@ -427,15 +393,14 @@ CO_ReturnError_t CO_epoll_createGtw(CO_epoll_gtw_t *epGtw,
         memset(&addr, 0, sizeof(struct sockaddr_un));
         addr.sun_family = AF_UNIX;
         strncpy(addr.sun_path, localSocketPath, sizeof(addr.sun_path) - 1);
-        ret = bind(epGtw->gtwa_fdSocket, (struct sockaddr *) &addr,
-                   sizeof(struct sockaddr_un));
-        if(ret < 0) {
+        ret = bind(epGtw->gtwa_fdSocket, (struct sockaddr*)&addr, sizeof(struct sockaddr_un));
+        if (ret < 0) {
             log_printf(LOG_CRIT, DBG_COMMAND_LOCAL_BIND, localSocketPath);
             return CO_ERROR_SYSCALL;
         }
 
         ret = listen(epGtw->gtwa_fdSocket, LISTEN_BACKLOG);
-        if(ret < 0) {
+        if (ret < 0) {
             log_printf(LOG_CRIT, DBG_ERRNO, "listen(local)");
             return CO_ERROR_SYSCALL;
         }
@@ -449,37 +414,32 @@ CO_ReturnError_t CO_epoll_createGtw(CO_epoll_gtw_t *epGtw,
         }
 
         log_printf(LOG_INFO, DBG_COMMAND_LOCAL_INFO, localSocketPath);
-    }
-    else if (commandInterface >= CO_COMMAND_IF_TCP_SOCKET_MIN &&
-             commandInterface <= CO_COMMAND_IF_TCP_SOCKET_MAX
-    ) {
+    } else if (commandInterface >= CO_COMMAND_IF_TCP_SOCKET_MIN && commandInterface <= CO_COMMAND_IF_TCP_SOCKET_MAX) {
         struct sockaddr_in addr;
         const int yes = 1;
 
         /* Create, bind and listen socket */
         epGtw->gtwa_fdSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
-        if(epGtw->gtwa_fdSocket < 0) {
+        if (epGtw->gtwa_fdSocket < 0) {
             log_printf(LOG_CRIT, DBG_ERRNO, "socket(tcp)");
             return CO_ERROR_SYSCALL;
         }
 
-        setsockopt(epGtw->gtwa_fdSocket, SOL_SOCKET, SO_REUSEADDR,
-                   &yes, sizeof(int));
+        setsockopt(epGtw->gtwa_fdSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
 
         memset(&addr, 0, sizeof(struct sockaddr_in));
         addr.sin_family = AF_INET;
         addr.sin_port = htons(commandInterface);
         addr.sin_addr.s_addr = INADDR_ANY;
 
-        ret = bind(epGtw->gtwa_fdSocket, (struct sockaddr *) &addr,
-                   sizeof(struct sockaddr_in));
-        if(ret < 0) {
+        ret = bind(epGtw->gtwa_fdSocket, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));
+        if (ret < 0) {
             log_printf(LOG_CRIT, DBG_COMMAND_TCP_BIND, commandInterface);
             return CO_ERROR_SYSCALL;
         }
 
         ret = listen(epGtw->gtwa_fdSocket, LISTEN_BACKLOG);
-        if(ret < 0) {
+        if (ret < 0) {
             log_printf(LOG_CRIT, DBG_ERRNO, "listen(tcp)");
             return CO_ERROR_SYSCALL;
         }
@@ -493,8 +453,7 @@ CO_ReturnError_t CO_epoll_createGtw(CO_epoll_gtw_t *epGtw,
         }
 
         log_printf(LOG_INFO, DBG_COMMAND_TCP_INFO, commandInterface);
-    }
-    else {
+    } else {
         epGtw->commandInterface = CO_COMMAND_IF_DISABLED;
     }
 
@@ -522,7 +481,8 @@ CO_ReturnError_t CO_epoll_createGtw(CO_epoll_gtw_t *epGtw,
     return CO_ERROR_NO;
 }
 
-void CO_epoll_closeGtw(CO_epoll_gtw_t *epGtw) {
+void
+CO_epoll_closeGtw(CO_epoll_gtw_t* epGtw) {
     if (epGtw == NULL) {
         return;
     }
@@ -533,11 +493,10 @@ void CO_epoll_closeGtw(CO_epoll_gtw_t *epGtw) {
         }
         close(epGtw->gtwa_fdSocket);
         /* Remove local socket file from filesystem. */
-        if(remove(epGtw->localSocketPath) < 0) {
+        if (remove(epGtw->localSocketPath) < 0) {
             log_printf(LOG_CRIT, DBG_ERRNO, "remove(local)");
         }
-    }
-    else if (epGtw->commandInterface >= CO_COMMAND_IF_TCP_SOCKET_MIN) {
+    } else if (epGtw->commandInterface >= CO_COMMAND_IF_TCP_SOCKET_MIN) {
         if (epGtw->gtwa_fd > 0) {
             close(epGtw->gtwa_fd);
         }
@@ -547,48 +506,39 @@ void CO_epoll_closeGtw(CO_epoll_gtw_t *epGtw) {
     epGtw->gtwa_fdSocket = -1;
 }
 
-void CO_epoll_initCANopenGtw(CO_epoll_gtw_t *epGtw, CO_t *co) {
+void
+CO_epoll_initCANopenGtw(CO_epoll_gtw_t* epGtw, CO_t* co) {
     if (epGtw == NULL || co == NULL || co->nodeIdUnconfigured) {
         return;
     }
 
-    CO_GTWA_initRead(co->gtwa, gtwa_write_response, (void *)&epGtw->gtwa_fd);
+    CO_GTWA_initRead(co->gtwa, gtwa_write_response, (void*)&epGtw->gtwa_fd);
     epGtw->freshCommand = true;
 }
 
-void CO_epoll_processGtw(CO_epoll_gtw_t *epGtw,
-                         CO_t *co,
-                         CO_epoll_t *ep)
-{
+void
+CO_epoll_processGtw(CO_epoll_gtw_t* epGtw, CO_t* co, CO_epoll_t* ep) {
     if (epGtw == NULL || co == NULL || ep == NULL) {
         return;
     }
 
     /* Verify for epoll events */
-    if (ep->epoll_new
-        && (ep->ev.data.fd == epGtw->gtwa_fdSocket
-            || ep->ev.data.fd == epGtw->gtwa_fd)
-    ) {
-        if ((ep->ev.events & EPOLLIN) != 0
-             && ep->ev.data.fd == epGtw->gtwa_fdSocket
-        ) {
+    if (ep->epoll_new && (ep->ev.data.fd == epGtw->gtwa_fdSocket || ep->ev.data.fd == epGtw->gtwa_fd)) {
+        if ((ep->ev.events & EPOLLIN) != 0 && ep->ev.data.fd == epGtw->gtwa_fdSocket) {
             bool_t fail = false;
 
-            epGtw->gtwa_fd = accept4(epGtw->gtwa_fdSocket,
-                                     NULL, NULL, SOCK_NONBLOCK);
+            epGtw->gtwa_fd = accept4(epGtw->gtwa_fdSocket, NULL, NULL, SOCK_NONBLOCK);
             if (epGtw->gtwa_fd < 0) {
                 fail = true;
                 if (errno != EAGAIN && errno != EWOULDBLOCK) {
                     log_printf(LOG_CRIT, DBG_ERRNO, "accept(gtwa_fdSocket)");
                 }
-            }
-            else {
+            } else {
                 /* add fd to epoll */
                 struct epoll_event ev2 = {0};
                 ev2.events = EPOLLIN;
                 ev2.data.fd = epGtw->gtwa_fd;
-                int ret = epoll_ctl(ep->epoll_fd,
-                                    EPOLL_CTL_ADD, ev2.data.fd, &ev2);
+                int ret = epoll_ctl(ep->epoll_fd, EPOLL_CTL_ADD, ev2.data.fd, &ev2);
                 if (ret < 0) {
                     fail = true;
                     log_printf(LOG_CRIT, DBG_ERRNO, "epoll_ctl(add, gtwa_fd)");
@@ -600,56 +550,43 @@ void CO_epoll_processGtw(CO_epoll_gtw_t *epGtw,
                 socetAcceptEnableForEpoll(epGtw);
             }
             ep->epoll_new = false;
-        }
-        else if ((ep->ev.events & EPOLLIN) != 0
-             && ep->ev.data.fd == epGtw->gtwa_fd
-        ) {
+        } else if ((ep->ev.events & EPOLLIN) != 0 && ep->ev.data.fd == epGtw->gtwa_fd) {
             char buf[CO_CONFIG_GTWA_COMM_BUF_SIZE];
-            size_t space = co->nodeIdUnconfigured ?
-                        CO_CONFIG_GTWA_COMM_BUF_SIZE :
-                        CO_GTWA_write_getSpace(co->gtwa);
+            size_t space = co->nodeIdUnconfigured ? CO_CONFIG_GTWA_COMM_BUF_SIZE : CO_GTWA_write_getSpace(co->gtwa);
 
             ssize_t s = read(epGtw->gtwa_fd, buf, space);
 
             if (space == 0 || co->nodeIdUnconfigured) {
                 /* continue or purge data */
-            }
-            else if (s < 0 &&  errno != EAGAIN) {
+            } else if (s < 0 && errno != EAGAIN) {
                 log_printf(LOG_DEBUG, DBG_ERRNO, "read(gtwa_fd)");
-            }
-            else if (s >= 0) {
+            } else if (s >= 0) {
                 if (epGtw->commandInterface == CO_COMMAND_IF_STDIO) {
                     /* simplify command interface on stdio, make hard to type
-                    * sequence optional, prepend "[0] " to string, if missing */
+                     * sequence optional, prepend "[0] " to string, if missing */
                     const char sequence[] = "[0] ";
-                    bool_t closed = (buf[s-1] == '\n'); /* is command closed? */
+                    bool_t closed = (buf[s - 1] == '\n'); /* is command closed? */
 
-                    if (buf[0] != '[' && (space - s) >= strlen(sequence)
-                        && isgraph(buf[0]) && buf[0] != '#'
-                        && closed && epGtw->freshCommand
-                    ) {
+                    if (buf[0] != '[' && (space - s) >= strlen(sequence) && isgraph(buf[0]) && buf[0] != '#' && closed
+                        && epGtw->freshCommand) {
                         CO_GTWA_write(co->gtwa, sequence, strlen(sequence));
                     }
                     epGtw->freshCommand = closed;
                     CO_GTWA_write(co->gtwa, buf, s);
-                }
-                else { /* socket, local or tcp */
+                } else { /* socket, local or tcp */
                     if (s == 0) {
                         /* EOF received, close connection and enable socket
                          * accepting */
-                        int ret = epoll_ctl(ep->epoll_fd, EPOLL_CTL_DEL,
-                                            epGtw->gtwa_fd, NULL);
+                        int ret = epoll_ctl(ep->epoll_fd, EPOLL_CTL_DEL, epGtw->gtwa_fd, NULL);
                         if (ret < 0) {
-                            log_printf(LOG_CRIT, DBG_ERRNO,
-                                    "epoll_ctl(del, gtwa_fd)");
+                            log_printf(LOG_CRIT, DBG_ERRNO, "epoll_ctl(del, gtwa_fd)");
                         }
                         if (close(epGtw->gtwa_fd) < 0) {
                             log_printf(LOG_CRIT, DBG_ERRNO, "close(gtwa_fd)");
                         }
                         epGtw->gtwa_fd = -1;
                         socetAcceptEnableForEpoll(epGtw);
-                    }
-                    else {
+                    } else {
                         CO_GTWA_write(co->gtwa, buf, s);
                     }
                 }
@@ -657,10 +594,8 @@ void CO_epoll_processGtw(CO_epoll_gtw_t *epGtw,
             epGtw->socketTimeoutTmr_us = 0;
 
             ep->epoll_new = false;
-        }
-        else if ((ep->ev.events & (EPOLLERR | EPOLLHUP)) != 0) {
-            log_printf(LOG_DEBUG, DBG_GENERAL,
-                       "socket error or hangup, event=", ep->ev.events);
+        } else if ((ep->ev.events & (EPOLLERR | EPOLLHUP)) != 0) {
+            log_printf(LOG_DEBUG, DBG_GENERAL, "socket error or hangup, event=", ep->ev.events);
             if (close(epGtw->gtwa_fd) < 0) {
                 log_printf(LOG_CRIT, DBG_ERRNO, "close(gtwa_fd, hangup)");
             }
@@ -668,24 +603,19 @@ void CO_epoll_processGtw(CO_epoll_gtw_t *epGtw,
     } /* if (ep->epoll_new) */
 
     /* if socket connection is established, verify timeout */
-    if (epGtw->socketTimeout_us > 0
-        && epGtw->gtwa_fdSocket > 0 && epGtw->gtwa_fd > 0)
-    {
+    if (epGtw->socketTimeout_us > 0 && epGtw->gtwa_fdSocket > 0 && epGtw->gtwa_fd > 0) {
         if (epGtw->socketTimeoutTmr_us > epGtw->socketTimeout_us) {
             /* timout expired, close current connection and accept next */
-            int ret = epoll_ctl(ep->epoll_fd,
-                                EPOLL_CTL_DEL, epGtw->gtwa_fd, NULL);
+            int ret = epoll_ctl(ep->epoll_fd, EPOLL_CTL_DEL, epGtw->gtwa_fd, NULL);
             if (ret < 0) {
-                log_printf(LOG_CRIT, DBG_ERRNO,
-                           "epoll_ctl(del, gtwa_fd), tmo");
+                log_printf(LOG_CRIT, DBG_ERRNO, "epoll_ctl(del, gtwa_fd), tmo");
             }
             if (close(epGtw->gtwa_fd) < 0) {
                 log_printf(LOG_CRIT, DBG_ERRNO, "close(gtwa_fd), tmo");
             }
             epGtw->gtwa_fd = -1;
             socetAcceptEnableForEpoll(epGtw);
-        }
-        else {
+        } else {
             epGtw->socketTimeoutTmr_us += ep->timeDifference_us;
         }
     }

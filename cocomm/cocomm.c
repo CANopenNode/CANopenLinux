@@ -39,58 +39,60 @@
 
 /* colors and stream for printing status */
 char *greenC, *redC, *resetC;
-FILE *errStream;
+FILE* errStream;
 
-
-static void printUsage(char *progName) {
-fprintf(errStream,
-"Usage: %s [options] ['<command string>' ['<command string>'] ...]\n"
-"\n"
-"Program reads CANopen gateway command strings from arguments, standard input or\n"
-"file. It sends commands to canopend via socket, line after line. Response status\n"
-"is printed to standard error and response data (for example, value from write\n"
-"command) is printed to standard output. Command strings from arguments must\n"
-"be quoted. Socket is either unix domain socket (default) or a remote tcp socket\n"
-"(option -t). For more information see http://www.can-cia.org/, CiA 309 standard.\n"
-"\n"
-"Options:\n"
-"  -f <input file>  Path to the input file.\n"
-"  -s <socket path> Path to the unix socket. If not specified, path is obtained\n"
-"                   from environmental variable, configured with:\n"
-"                   'export cocomm_socket=<socket path>'. If latter is not\n"
-"                   specified, default value is used: '/tmp/CO_command_socket'.\n"
-"  -t <host>        Connect via tcp to remote <host>. Set also with\n"
-"                   'export cocomm_host=<host>'. Unix socket is used by default.\n"
-"  -p <port>        Tcp port to connect to when using -t. Set also with\n"
-"                   'export cocomm_port=<port>'. Default is 60000.\n"
-"  -i               If set, then standard input will be read after each command\n"
-"                   string from arguments. Useful with write commands.\n"
-"  -o all|data|flat By defult (setting 'all') outupt is split to colored stderr\n"
-"                   and stdout. 'data' prints data only to stdout. 'flat' prints\n"
-"                   all to stdout, set also with 'export cocomm_flat=<0|1>'.\n"
-"  -d <can device>  If specified, then candump of specified CAN device will be\n"
-"                   printed after the command response. Set also with\n"
-"                   'export cocomm_candump=<can device>'. Not used by default.\n"
-"  -n <count>       Print <count> of candump messages, then exit. Set also with\n"
-"                   'export cocomm_candump_count=<count>'. Default is 10.\n"
-"  -T <msec>        Exit candump after <msec> without reception. Set also with\n"
-"                   'export cocomm_candump_timeout=<msec>'. Default is 1000.\n"
-"  --help           Display this help.\n"
-"\n"
-"For help on command strings type '%s \"help\"'.\n"
-"\n"
-"See also: https://github.com/CANopenNode/CANopenLinux\n"
-"\n", progName, progName);
+static void
+printUsage(char* progName) {
+    fprintf(errStream,
+            "Usage: %s [options] ['<command string>' ['<command string>'] ...]\n"
+            "\n"
+            "Program reads CANopen gateway command strings from arguments, standard input or\n"
+            "file. It sends commands to canopend via socket, line after line. Response status\n"
+            "is printed to standard error and response data (for example, value from write\n"
+            "command) is printed to standard output. Command strings from arguments must\n"
+            "be quoted. Socket is either unix domain socket (default) or a remote tcp socket\n"
+            "(option -t). For more information see http://www.can-cia.org/, CiA 309 standard.\n"
+            "\n"
+            "Options:\n"
+            "  -f <input file>  Path to the input file.\n"
+            "  -s <socket path> Path to the unix socket. If not specified, path is obtained\n"
+            "                   from environmental variable, configured with:\n"
+            "                   'export cocomm_socket=<socket path>'. If latter is not\n"
+            "                   specified, default value is used: '/tmp/CO_command_socket'.\n"
+            "  -t <host>        Connect via tcp to remote <host>. Set also with\n"
+            "                   'export cocomm_host=<host>'. Unix socket is used by default.\n"
+            "  -p <port>        Tcp port to connect to when using -t. Set also with\n"
+            "                   'export cocomm_port=<port>'. Default is 60000.\n"
+            "  -i               If set, then standard input will be read after each command\n"
+            "                   string from arguments. Useful with write commands.\n"
+            "  -o all|data|flat By defult (setting 'all') outupt is split to colored stderr\n"
+            "                   and stdout. 'data' prints data only to stdout. 'flat' prints\n"
+            "                   all to stdout, set also with 'export cocomm_flat=<0|1>'.\n"
+            "  -d <can device>  If specified, then candump of specified CAN device will be\n"
+            "                   printed after the command response. Set also with\n"
+            "                   'export cocomm_candump=<can device>'. Not used by default.\n"
+            "  -n <count>       Print <count> of candump messages, then exit. Set also with\n"
+            "                   'export cocomm_candump_count=<count>'. Default is 10.\n"
+            "  -T <msec>        Exit candump after <msec> without reception. Set also with\n"
+            "                   'export cocomm_candump_timeout=<msec>'. Default is 1000.\n"
+            "  --help           Display this help.\n"
+            "\n"
+            "For help on command strings type '%s \"help\"'.\n"
+            "\n"
+            "See also: https://github.com/CANopenNode/CANopenLinux\n"
+            "\n",
+            progName, progName);
 }
 
 /* print reply, status to errStream (red or green), value to stdout */
-static int printReply(int fd_gtw) {
+static int
+printReply(int fd_gtw) {
     char* replyBuf = malloc(BUF_SIZE + BUF_LAG + 1);
     size_t count = 0; /* count of bytes in replyBuf */
     int firstPass = 1;
     int ret = EXIT_SUCCESS;
 
-    if(replyBuf == NULL) {
+    if (replyBuf == NULL) {
         perror("replyBuf malloc");
         exit(EXIT_FAILURE);
     }
@@ -98,27 +100,23 @@ static int printReply(int fd_gtw) {
     for (;;) {
         ssize_t nRead = read(fd_gtw, &replyBuf[count], BUF_SIZE); /* blocking */
 
-        if(nRead > 0) {
+        if (nRead > 0) {
             count += nRead;
             replyBuf[count] = 0;
 
             if (firstPass == 1) {
                 /* check for response type. Only response value goes to stdout */
-                if (strstr(replyBuf, "] ERROR:") != NULL
-                    && strstr(replyBuf, "\r\n") != NULL
-                ) {
+                if (strstr(replyBuf, "] ERROR:") != NULL && strstr(replyBuf, "\r\n") != NULL) {
                     fprintf(errStream, "%s%s%s", redC, replyBuf, resetC);
                     ret = EXIT_FAILURE;
                     break;
-                }
-                else if (strstr(replyBuf, "] OK\r\n") != NULL) {
+                } else if (strstr(replyBuf, "] OK\r\n") != NULL) {
                     fprintf(errStream, "%s%s%s", greenC, replyBuf, resetC);
                     break;
-                }
-                else {
-                    char *replyBufTrimmed = replyBuf;
-                    char *seq = strstr(replyBuf, "] ");
-                    char *end = strstr(replyBuf, "\r\n");
+                } else {
+                    char* replyBufTrimmed = replyBuf;
+                    char* seq = strstr(replyBuf, "] ");
+                    char* end = strstr(replyBuf, "\r\n");
                     if (seq != NULL && (size_t)(seq - replyBuf) < 15) {
                         replyBufTrimmed = seq + 2;
                         seq[1] = 0;
@@ -131,8 +129,7 @@ static int printReply(int fd_gtw) {
                         fflush(stdout);
                         fputs("\r\n", errStream);
                         break;
-                    }
-                    else {
+                    } else {
                         /* print replyBuf to stdout, except last BUF_LAG bytes.
                          * move them to the beginning of the replyBuf */
                         if (count > BUF_LAG) {
@@ -145,19 +142,17 @@ static int printReply(int fd_gtw) {
                     }
                 }
                 firstPass = 0;
-            }
-            else {
-                char *end = strstr(replyBuf, "\r\n");
+            } else {
+                char* end = strstr(replyBuf, "\r\n");
                 if (end != NULL) {
-                    char *errResp = strstr(replyBuf, "\n...ERROR:0x");
+                    char* errResp = strstr(replyBuf, "\n...ERROR:0x");
                     if (errResp != NULL) {
                         errResp[0] = 0;
                         fputs(replyBuf, stdout);
                         fflush(stdout);
                         fprintf(errStream, "\n%s%s%s", redC, &errResp[1], resetC);
                         ret = EXIT_FAILURE;
-                    }
-                    else {
+                    } else {
                         end[0] = 0;
                         fputs(replyBuf, stdout);
                         fflush(stdout);
@@ -174,13 +169,11 @@ static int printReply(int fd_gtw) {
                     memmove(replyBuf, &replyBuf[nWrite], count);
                 }
             }
-        }
-        else if (nRead == 0) {
+        } else if (nRead == 0) {
             fprintf(errStream, "%sError, zero response%s\n", redC, resetC);
             ret = EXIT_FAILURE;
             break;
-        }
-        else {
+        } else {
             perror("Socket read failed");
             free(replyBuf);
             exit(EXIT_FAILURE);
@@ -192,16 +185,17 @@ static int printReply(int fd_gtw) {
     return ret;
 }
 
-
-int main (int argc, char *argv[]) {
+int
+main(int argc, char* argv[]) {
     /* configurable options */
-    enum {out_all, out_data, out_flat} outputType = out_all;
-    char *inputFilePath = NULL;
-    char *socketPath = "/tmp/CO_command_socket"; /* Name of the local domain socket */
-    char hostname[HOST_NAME_MAX]; /* name of the remote TCP host */
-    char tcpPort[20] = "60000"; /* default port when used in tcp mode */
+    enum { out_all, out_data, out_flat } outputType = out_all;
+
+    char* inputFilePath = NULL;
+    char* socketPath = "/tmp/CO_command_socket"; /* Name of the local domain socket */
+    char hostname[HOST_NAME_MAX];                /* name of the remote TCP host */
+    char tcpPort[20] = "60000";                  /* default port when used in tcp mode */
     int additionalReadStdin = 0;
-    char *candump = NULL;
+    char* candump = NULL;
     long candumpCount = 10;
     long candumpTmo = 1000;
 
@@ -213,13 +207,13 @@ int main (int argc, char *argv[]) {
     sa_family_t addrFamily = AF_UNIX;
     errStream = stderr;
 
-    if(argc >= 2 && strcmp(argv[1], "--help") == 0) {
+    if (argc >= 2 && strcmp(argv[1], "--help") == 0) {
         printUsage(argv[0]);
         exit(EXIT_SUCCESS);
     }
 
     /* Get program options from environment variables */
-    char *env;
+    char* env;
     if ((env = getenv("cocomm_host")) != NULL) {
         strncpy(hostname, env, sizeof(hostname));
         addrFamily = AF_INET;
@@ -249,11 +243,9 @@ int main (int argc, char *argv[]) {
     }
 
     /* Get program options from arguments */
-    while((opt = getopt(argc, argv, "f:s:t:p:io:d:n:T:")) != -1) {
+    while ((opt = getopt(argc, argv, "f:s:t:p:io:d:n:T:")) != -1) {
         switch (opt) {
-            case 'f':
-                inputFilePath = optarg;
-                break;
+            case 'f': inputFilePath = optarg; break;
             case 's':
                 addrFamily = AF_UNIX;
                 socketPath = optarg;
@@ -262,30 +254,19 @@ int main (int argc, char *argv[]) {
                 addrFamily = AF_INET;
                 strncpy(hostname, optarg, sizeof(hostname));
                 break;
-            case 'p':
-                strncpy(tcpPort, optarg, sizeof(tcpPort));
-                break;
-            case 'i':
-                additionalReadStdin = 1;
-                break;
+            case 'p': strncpy(tcpPort, optarg, sizeof(tcpPort)); break;
+            case 'i': additionalReadStdin = 1; break;
             case 'o':
-                if (strcmp(optarg, "data") == 0)
+                if (strcmp(optarg, "data") == 0) {
                     outputType = out_data;
-                else if (strcmp(optarg, "flat") == 0)
+                } else if (strcmp(optarg, "flat") == 0) {
                     outputType = out_flat;
+                }
                 break;
-            case 'd':
-                candump = optarg;
-                break;
-            case 'n':
-                candumpCount = atol(optarg);
-                break;
-            case 'T':
-                candumpTmo = atol(optarg);
-                break;
-            default:
-                printUsage(argv[0]);
-                exit(EXIT_FAILURE);
+            case 'd': candump = optarg; break;
+            case 'n': candumpCount = atol(optarg); break;
+            case 'T': candumpTmo = atol(optarg); break;
+            default: printUsage(argv[0]); exit(EXIT_FAILURE);
         }
     }
 
@@ -316,7 +297,7 @@ int main (int argc, char *argv[]) {
     }
 
     /* Create and connect client socket */
-    if(addrFamily == AF_INET) {
+    if (addrFamily == AF_INET) {
 
         struct addrinfo hints, *res, *rp;
         int errcode;
@@ -350,10 +331,9 @@ int main (int argc, char *argv[]) {
             perror("Socket connection failed");
             exit(EXIT_FAILURE);
         }
-    }
-    else { /* addrFamily == AF_UNIX */
+    } else { /* addrFamily == AF_UNIX */
         fd_gtw = socket(AF_UNIX, SOCK_STREAM, 0);
-        if(fd_gtw == -1) {
+        if (fd_gtw == -1) {
             perror("Socket creation failed");
             exit(EXIT_FAILURE);
         }
@@ -362,7 +342,7 @@ int main (int argc, char *argv[]) {
         addr_un.sun_family = addrFamily;
         strncpy(addr_un.sun_path, socketPath, sizeof(addr_un.sun_path) - 1);
 
-        if(connect(fd_gtw, (struct sockaddr *)&addr_un, sizeof(struct sockaddr_un)) == -1) {
+        if (connect(fd_gtw, (struct sockaddr*)&addr_un, sizeof(struct sockaddr_un)) == -1) {
             fprintf(stderr, "Socket connection failed \"%s\": ", socketPath);
             perror(NULL);
             exit(EXIT_FAILURE);
@@ -397,8 +377,7 @@ int main (int argc, char *argv[]) {
             perror(NULL);
             exit(EXIT_FAILURE);
         }
-    }
-    else {
+    } else {
         candumpCount = 0;
     }
 
@@ -406,22 +385,24 @@ int main (int argc, char *argv[]) {
     int ret = EXIT_SUCCESS;
 
     commBuf = malloc(BUF_SIZE);
-    if(commBuf == NULL) {
+    if (commBuf == NULL) {
         perror("commBuf malloc");
         exit(EXIT_FAILURE);
     }
 
-    if(inputFilePath != NULL) {
-        FILE *fp = fopen(inputFilePath, "r");
-        if(fp == NULL) {
+    if (inputFilePath != NULL) {
+        FILE* fp = fopen(inputFilePath, "r");
+        if (fp == NULL) {
             perror("Can't open input file");
             free(commBuf);
             exit(EXIT_FAILURE);
         }
 
-        while(fgets(commBuf, BUF_SIZE, fp) != NULL) {
+        while (fgets(commBuf, BUF_SIZE, fp) != NULL) {
             size_t len = strlen(commBuf);
-            if (len < 1) continue;
+            if (len < 1) {
+                continue;
+            }
 
             /* send command */
             if (write(fd_gtw, commBuf, len) != len) { /* blocking function */
@@ -442,17 +423,17 @@ int main (int argc, char *argv[]) {
     }
 
     /* get command from arguments */
-    else if(optind < argc) {
-        for(int i = optind; i < argc; i++) {
-            char *comm = argv[i];
+    else if (optind < argc) {
+        for (int i = optind; i < argc; i++) {
+            char* comm = argv[i];
             commBuf[0] = 0;
 
             /* Add sequence number if not present on command line argument */
-            if(comm[0] != '[' && comm[0] != '#') {
+            if (comm[0] != '[' && comm[0] != '#') {
                 sprintf(commBuf, "[%d] ", i - optind + 1);
             }
 
-            if((strlen(commBuf) + strlen(comm)) >= (BUF_SIZE - 2)) {
+            if ((strlen(commBuf) + strlen(comm)) >= (BUF_SIZE - 2)) {
                 fprintf(errStream, "%sCommand string too long!%s\n", redC, greenC);
                 continue;
             }
@@ -467,21 +448,22 @@ int main (int argc, char *argv[]) {
                     free(commBuf);
                     exit(EXIT_FAILURE);
                 }
-            }
-            else {
+            } else {
                 strcat(commBuf, " ");
                 size_t len = strlen(commBuf);
                 char lastChar;
 
                 do {
-                    if (fgets(commBuf+len, BUF_SIZE-1-len, stdin) == NULL)
+                    if (fgets(commBuf + len, BUF_SIZE - 1 - len, stdin) == NULL) {
                         strcat(commBuf, "\n");
+                    }
 
                     len = strlen(commBuf);
                     lastChar = commBuf[len - 1];
 
-                    if (len < BUF_SIZE-2 && lastChar != '\n')
+                    if (len < BUF_SIZE - 2 && lastChar != '\n') {
                         continue;
+                    }
 
                     /* send command */
                     if (write(fd_gtw, commBuf, len) != len) { /* blocking f. */
@@ -503,9 +485,11 @@ int main (int argc, char *argv[]) {
 
     /* get commands from stdin, line after line */
     else {
-        while(fgets(commBuf, BUF_SIZE, stdin) != NULL) {
+        while (fgets(commBuf, BUF_SIZE, stdin) != NULL) {
             size_t len = strlen(commBuf);
-            if (len < 1) continue;
+            if (len < 1) {
+                continue;
+            }
 
             /* send command */
             if (write(fd_gtw, commBuf, len) != len) { /* blocking function */
@@ -549,7 +533,7 @@ int main (int argc, char *argv[]) {
             }
             *pbuf = 0;
 
-            printf ("%03X#%s\n", canFrame.can_id, buf);
+            printf("%03X#%s\n", canFrame.can_id, buf);
         }
         close(fd_candump);
     }

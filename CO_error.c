@@ -29,14 +29,11 @@
 #include "CO_error.h"
 #include "301/CO_driver.h"
 
-
 /*
  * Reset CAN interface and set to listen only mode
  */
-static CO_CANinterfaceState_t CO_CANerrorSetListenOnly(
-        CO_CANinterfaceErrorhandler_t     *CANerrorhandler,
-        bool_t                             resetIf)
-{
+static CO_CANinterfaceState_t
+CO_CANerrorSetListenOnly(CO_CANinterfaceErrorhandler_t* CANerrorhandler, bool_t resetIf) {
     log_printf(LOG_DEBUG, DBG_CAN_SET_LISTEN_ONLY, CANerrorhandler->ifName);
 
     clock_gettime(CLOCK_MONOTONIC, &CANerrorhandler->timestamp);
@@ -45,28 +42,25 @@ static CO_CANinterfaceState_t CO_CANerrorSetListenOnly(
     if (resetIf) {
         int ret;
         char command[100];
-        snprintf(command, sizeof(command), "ip link set %s down && "
-                                           "ip link set %s up "
-                                           "&",
-                                           CANerrorhandler->ifName,
-                                           CANerrorhandler->ifName);
+        snprintf(command, sizeof(command),
+                 "ip link set %s down && "
+                 "ip link set %s up "
+                 "&",
+                 CANerrorhandler->ifName, CANerrorhandler->ifName);
         ret = system(command);
-        if(ret < 0){
+        if (ret < 0) {
             log_printf(LOG_DEBUG, DBG_ERRNO, "system()");
         }
-
     }
 
     return CO_INTERFACE_LISTEN_ONLY;
 }
 
-
 /*
  * Clear listen only
  */
-static void CO_CANerrorClearListenOnly(
-        CO_CANinterfaceErrorhandler_t     *CANerrorhandler)
-{
+static void
+CO_CANerrorClearListenOnly(CO_CANinterfaceErrorhandler_t* CANerrorhandler) {
     log_printf(LOG_DEBUG, DBG_CAN_CLR_LISTEN_ONLY, CANerrorhandler->ifName);
 
     CANerrorhandler->listenOnly = false;
@@ -74,14 +68,11 @@ static void CO_CANerrorClearListenOnly(
     CANerrorhandler->timestamp.tv_nsec = 0;
 }
 
-
 /*
  * Check and handle "bus off" state
  */
-static CO_CANinterfaceState_t CO_CANerrorBusoff(
-        CO_CANinterfaceErrorhandler_t     *CANerrorhandler,
-        const struct can_frame            *msg)
-{
+static CO_CANinterfaceState_t
+CO_CANerrorBusoff(CO_CANinterfaceErrorhandler_t* CANerrorhandler, const struct can_frame* msg) {
     CO_CANinterfaceState_t result = CO_INTERFACE_ACTIVE;
 
     if ((msg->can_id & CAN_ERR_BUSOFF) != 0) {
@@ -98,14 +89,11 @@ static CO_CANinterfaceState_t CO_CANerrorBusoff(
     return result;
 }
 
-
 /*
  * Check and handle controller problems
  */
-static CO_CANinterfaceState_t CO_CANerrorCrtl(
-        CO_CANinterfaceErrorhandler_t     *CANerrorhandler,
-        const struct can_frame            *msg)
-{
+static CO_CANinterfaceState_t
+CO_CANerrorCrtl(CO_CANinterfaceErrorhandler_t* CANerrorhandler, const struct can_frame* msg) {
     CO_CANinterfaceState_t result = CO_INTERFACE_ACTIVE;
 
     /* Control
@@ -124,27 +112,22 @@ static CO_CANinterfaceState_t CO_CANerrorCrtl(
             log_printf(LOG_NOTICE, CAN_RX_PASSIVE, CANerrorhandler->ifName);
             CANerrorhandler->CANerrorStatus |= CO_CAN_ERRRX_PASSIVE;
             /* CANerrorhandler->CANerrorStatus |= CO_CAN_ERRRX_WARNING; */
-        }
-        else if ((msg->data[1] & CAN_ERR_CRTL_TX_PASSIVE) != 0) {
+        } else if ((msg->data[1] & CAN_ERR_CRTL_TX_PASSIVE) != 0) {
             log_printf(LOG_NOTICE, CAN_TX_PASSIVE, CANerrorhandler->ifName);
             CANerrorhandler->CANerrorStatus |= CO_CAN_ERRTX_PASSIVE;
             /* CANerrorhandler->CANerrorStatus |= CO_CAN_ERRTX_WARNING; */
-        }
-        else if ((msg->data[1] & CAN_ERR_CRTL_RX_OVERFLOW) != 0) {
+        } else if ((msg->data[1] & CAN_ERR_CRTL_RX_OVERFLOW) != 0) {
             log_printf(LOG_NOTICE, CAN_RX_BUF_OVERFLOW, CANerrorhandler->ifName);
             CANerrorhandler->CANerrorStatus |= CO_CAN_ERRRX_OVERFLOW;
-        }
-        else if ((msg->data[1] & CAN_ERR_CRTL_TX_OVERFLOW) != 0) {
+        } else if ((msg->data[1] & CAN_ERR_CRTL_TX_OVERFLOW) != 0) {
             log_printf(LOG_NOTICE, CAN_TX_BUF_OVERFLOW, CANerrorhandler->ifName);
             CANerrorhandler->CANerrorStatus |= CO_CAN_ERRTX_OVERFLOW;
-        }
-        else if ((msg->data[1] & CAN_ERR_CRTL_RX_WARNING) != 0) {
+        } else if ((msg->data[1] & CAN_ERR_CRTL_RX_WARNING) != 0) {
             log_printf(LOG_INFO, CAN_RX_LEVEL_WARNING, CANerrorhandler->ifName);
             /* clear passive flag, set warning */
             CANerrorhandler->CANerrorStatus &= 0x7FFF ^ CO_CAN_ERRRX_PASSIVE;
             /* CANerrorhandler->CANerrorStatus |= CO_CAN_ERRRX_WARNING; */
-        }
-        else if ((msg->data[1] & CAN_ERR_CRTL_TX_WARNING) != 0) {
+        } else if ((msg->data[1] & CAN_ERR_CRTL_TX_WARNING) != 0) {
             log_printf(LOG_INFO, CAN_TX_LEVEL_WARNING, CANerrorhandler->ifName);
             /* clear passive flag, set warning */
             CANerrorhandler->CANerrorStatus &= 0x7FFF ^ CO_CAN_ERRTX_PASSIVE;
@@ -159,14 +142,11 @@ static CO_CANinterfaceState_t CO_CANerrorCrtl(
     return result;
 }
 
-
 /*
  * Check and handle controller problems
  */
-static CO_CANinterfaceState_t CO_CANerrorNoack(
-        CO_CANinterfaceErrorhandler_t     *CANerrorhandler,
-        const struct can_frame            *msg)
-{
+static CO_CANinterfaceState_t
+CO_CANerrorNoack(CO_CANinterfaceErrorhandler_t* CANerrorhandler, const struct can_frame* msg) {
     CO_CANinterfaceState_t result = CO_INTERFACE_ACTIVE;
 
     if (CANerrorhandler->listenOnly) {
@@ -175,7 +155,7 @@ static CO_CANinterfaceState_t CO_CANerrorNoack(
 
     /* received no ACK on transmission */
     if ((msg->can_id & CAN_ERR_ACK) != 0) {
-        CANerrorhandler->noackCounter ++;
+        CANerrorhandler->noackCounter++;
         if (CANerrorhandler->noackCounter > CO_CANerror_NOACK_MAX) {
             log_printf(LOG_INFO, CAN_NOACK, CANerrorhandler->ifName);
 
@@ -186,19 +166,14 @@ static CO_CANinterfaceState_t CO_CANerrorNoack(
              * in here or deleting it within Linux Kernel can driver  (set "false"). */
             result = CO_CANerrorSetListenOnly(CANerrorhandler, true);
         }
-    }
-    else {
+    } else {
         CANerrorhandler->noackCounter = 0;
     }
     return result;
 }
 
-
-void CO_CANerror_init(
-        CO_CANinterfaceErrorhandler_t     *CANerrorhandler,
-        int                                fd,
-        const char                        *ifName)
-{
+void
+CO_CANerror_init(CO_CANinterfaceErrorhandler_t* CANerrorhandler, int fd, const char* ifName) {
     if (CANerrorhandler == NULL) {
         return;
     }
@@ -212,10 +187,8 @@ void CO_CANerror_init(
     CANerrorhandler->CANerrorStatus = 0;
 }
 
-
-void CO_CANerror_disable(
-        CO_CANinterfaceErrorhandler_t     *CANerrorhandler)
-{
+void
+CO_CANerror_disable(CO_CANinterfaceErrorhandler_t* CANerrorhandler) {
     if (CANerrorhandler == NULL) {
         return;
     }
@@ -224,10 +197,8 @@ void CO_CANerror_disable(
     CANerrorhandler->fd = -1;
 }
 
-
-void CO_CANerror_rxMsg(
-        CO_CANinterfaceErrorhandler_t     *CANerrorhandler)
-{
+void
+CO_CANerror_rxMsg(CO_CANinterfaceErrorhandler_t* CANerrorhandler) {
     if (CANerrorhandler == NULL) {
         return;
     }
@@ -239,10 +210,8 @@ void CO_CANerror_rxMsg(
     CANerrorhandler->noackCounter = 0;
 }
 
-
-CO_CANinterfaceState_t CO_CANerror_txMsg(
-        CO_CANinterfaceErrorhandler_t     *CANerrorhandler)
-{
+CO_CANinterfaceState_t
+CO_CANerror_txMsg(CO_CANinterfaceErrorhandler_t* CANerrorhandler) {
     struct timespec now;
 
     if (CANerrorhandler == NULL) {
@@ -262,11 +231,8 @@ CO_CANinterfaceState_t CO_CANerror_txMsg(
     return CO_INTERFACE_ACTIVE;
 }
 
-
-CO_CANinterfaceState_t CO_CANerror_rxMsgError(
-        CO_CANinterfaceErrorhandler_t     *CANerrorhandler,
-        const struct can_frame            *msg)
-{
+CO_CANinterfaceState_t
+CO_CANerror_rxMsgError(CO_CANinterfaceErrorhandler_t* CANerrorhandler, const struct can_frame* msg) {
     if (CANerrorhandler == NULL) {
         return CO_INTERFACE_BUS_OFF;
     }
@@ -275,10 +241,8 @@ CO_CANinterfaceState_t CO_CANerror_rxMsgError(
 
     /* Log all error messages in full to debug log, even if analysis is done
      * further on. */
-    log_printf(LOG_DEBUG, DBG_CAN_ERROR_GENERAL, (int)msg->can_id,
-               msg->data[0], msg->data[1], msg->data[2], msg->data[3],
-               msg->data[4], msg->data[5], msg->data[6], msg->data[7],
-               CANerrorhandler->ifName);
+    log_printf(LOG_DEBUG, DBG_CAN_ERROR_GENERAL, (int)msg->can_id, msg->data[0], msg->data[1], msg->data[2],
+               msg->data[3], msg->data[4], msg->data[5], msg->data[6], msg->data[7], CANerrorhandler->ifName);
 
     /* Process errors - start with the most unambiguous one */
 

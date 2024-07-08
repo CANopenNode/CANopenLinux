@@ -48,7 +48,6 @@
 #include "CO_time_trace.h"
 #endif
 
-
 /* Interval of mainline and real-time thread in microseconds */
 #ifndef MAIN_THREAD_INTERVAL_US
 #define MAIN_THREAD_INTERVAL_US 100000
@@ -59,11 +58,9 @@
 
 /* default values for CO_CANopenInit() */
 #ifndef NMT_CONTROL
-#define NMT_CONTROL \
-            CO_NMT_STARTUP_TO_OPERATIONAL \
-          | CO_NMT_ERR_ON_ERR_REG \
-          | CO_ERR_REG_GENERIC_ERR \
-          | CO_ERR_REG_COMMUNICATION
+#define NMT_CONTROL                                                                                                    \
+    CO_NMT_STARTUP_TO_OPERATIONAL                                                                                      \
+    | CO_NMT_ERR_ON_ERR_REG | CO_ERR_REG_GENERIC_ERR | CO_ERR_REG_COMMUNICATION
 #endif
 #ifndef FIRST_HB_TIME
 #define FIRST_HB_TIME 500
@@ -99,7 +96,7 @@
 #endif
 
 /* CANopen object */
-CO_t *CO = NULL;
+CO_t* CO = NULL;
 
 /* Active node-id, copied from pendingNodeId in the communication reset */
 static uint8_t CO_activeNodeId = CO_LSS_NODE_ID_ASSIGNMENT;
@@ -115,9 +112,8 @@ typedef struct {
 mainlineStorage_t mlStorage = {0};
 
 #if (CO_CONFIG_TRACE) & CO_CONFIG_TRACE_ENABLE
-static CO_time_t            CO_time;            /* Object for current time */
+static CO_time_t CO_time; /* Object for current time */
 #endif
-
 
 /* Helper functions ***********************************************************/
 #ifndef CO_SINGLE_THREAD
@@ -128,13 +124,16 @@ static void* rt_thread(void* arg);
 
 /* Signal handler */
 volatile sig_atomic_t CO_endProgram = 0;
-static void sigHandler(int sig) {
+
+static void
+sigHandler(int sig) {
     (void)sig;
     CO_endProgram = 1;
 }
 
 /* Message logging function */
-void log_printf(int priority, const char *format, ...) {
+void
+log_printf(int priority, const char* format, ...) {
     va_list ap;
 
     va_start(ap, format);
@@ -163,107 +162,94 @@ void log_printf(int priority, const char *format, ...) {
 
 #if (CO_CONFIG_EM) & CO_CONFIG_EM_CONSUMER
 /* callback for emergency messages */
-static void EmergencyRxCallback(const uint16_t ident,
-                                const uint16_t errorCode,
-                                const uint8_t errorRegister,
-                                const uint8_t errorBit,
-                                const uint32_t infoCode)
-{
-    int16_t nodeIdRx = ident ? (ident&0x7F) : CO_activeNodeId;
+static void
+EmergencyRxCallback(const uint16_t ident, const uint16_t errorCode, const uint8_t errorRegister, const uint8_t errorBit,
+                    const uint32_t infoCode) {
+    int16_t nodeIdRx = ident ? (ident & 0x7F) : CO_activeNodeId;
 
-    log_printf(LOG_NOTICE, DBG_EMERGENCY_RX, nodeIdRx, errorCode,
-               errorRegister, errorBit, infoCode);
+    log_printf(LOG_NOTICE, DBG_EMERGENCY_RX, nodeIdRx, errorCode, errorRegister, errorBit, infoCode);
 }
 #endif
 
-#if ((CO_CONFIG_NMT) & CO_CONFIG_NMT_CALLBACK_CHANGE) \
- || ((CO_CONFIG_HB_CONS) & CO_CONFIG_HB_CONS_CALLBACK_CHANGE)
+#if ((CO_CONFIG_NMT)&CO_CONFIG_NMT_CALLBACK_CHANGE) || ((CO_CONFIG_HB_CONS)&CO_CONFIG_HB_CONS_CALLBACK_CHANGE)
 /* return string description of NMT state. */
-static char *NmtState2Str(CO_NMT_internalState_t state)
-{
-    switch(state) {
-        case CO_NMT_INITIALIZING:    return "initializing";
+static char*
+NmtState2Str(CO_NMT_internalState_t state) {
+    switch (state) {
+        case CO_NMT_INITIALIZING: return "initializing";
         case CO_NMT_PRE_OPERATIONAL: return "pre-operational";
-        case CO_NMT_OPERATIONAL:     return "operational";
-        case CO_NMT_STOPPED:         return "stopped";
-        default:                     return "unknown";
+        case CO_NMT_OPERATIONAL: return "operational";
+        case CO_NMT_STOPPED: return "stopped";
+        default: return "unknown";
     }
 }
 #endif
 
 #if (CO_CONFIG_NMT) & CO_CONFIG_NMT_CALLBACK_CHANGE
 /* callback for NMT change messages */
-static void NmtChangedCallback(CO_NMT_internalState_t state)
-{
+static void
+NmtChangedCallback(CO_NMT_internalState_t state) {
     log_printf(LOG_NOTICE, DBG_NMT_CHANGE, NmtState2Str(state), state);
 }
 #endif
 
 #if (CO_CONFIG_HB_CONS) & CO_CONFIG_HB_CONS_CALLBACK_CHANGE
 /* callback for monitoring Heartbeat remote NMT state change */
-static void HeartbeatNmtChangedCallback(uint8_t nodeId, uint8_t idx,
-                                        CO_NMT_internalState_t state,
-                                        void *object)
-{
+static void
+HeartbeatNmtChangedCallback(uint8_t nodeId, uint8_t idx, CO_NMT_internalState_t state, void* object) {
     (void)object;
-    log_printf(LOG_NOTICE, DBG_HB_CONS_NMT_CHANGE,
-               nodeId, idx, NmtState2Str(state), state);
+    log_printf(LOG_NOTICE, DBG_HB_CONS_NMT_CHANGE, nodeId, idx, NmtState2Str(state), state);
 }
 #endif
 
 /* callback for storing node id and bitrate */
-static bool_t LSScfgStoreCallback(void *object, uint8_t id, uint16_t bitRate) {
-    mainlineStorage_t *mainlineStorage = object;
+static bool_t
+LSScfgStoreCallback(void* object, uint8_t id, uint16_t bitRate) {
+    mainlineStorage_t* mainlineStorage = object;
     mainlineStorage->pendingNodeId = id;
     mainlineStorage->pendingBitRate = bitRate;
     return true;
 }
 
 /* Print usage */
-static void printUsage(char *progName) {
-printf(
-"Usage: %s <CAN device name> [options]\n", progName);
-printf(
-"\n"
-"Options:\n"
-"  -i <Node ID>        CANopen Node-id (1..127) or 0xFF (LSS unconfigured).\n");
+static void
+printUsage(char* progName) {
+    printf("Usage: %s <CAN device name> [options]\n", progName);
+    printf("\n"
+           "Options:\n"
+           "  -i <Node ID>        CANopen Node-id (1..127) or 0xFF (LSS unconfigured).\n");
 #ifndef CO_SINGLE_THREAD
-printf(
-"  -p <RT priority>    Real-time priority of RT thread (1 .. 99). If not set or\n"
-"                      set to -1, then normal scheduler is used for RT thread.\n");
+    printf("  -p <RT priority>    Real-time priority of RT thread (1 .. 99). If not set or\n"
+           "                      set to -1, then normal scheduler is used for RT thread.\n");
 #endif
-printf(
-"  -r                  Enable reboot on CANopen NMT reset_node command. \n");
+    printf("  -r                  Enable reboot on CANopen NMT reset_node command. \n");
 #if (CO_CONFIG_STORAGE) & CO_CONFIG_STORAGE_ENABLE
-printf(
-"  -s <storage path>   Path and filename prefix for data storage files.\n"
-"                      By default files are stored in current dictionary.\n");
+    printf("  -s <storage path>   Path and filename prefix for data storage files.\n"
+           "                      By default files are stored in current dictionary.\n");
 #endif
 #if (CO_CONFIG_GTW) & CO_CONFIG_GTW_ASCII
-printf(
-"  -c <interface>      Enable command interface for master functionality.\n"
-"                      One of three types of interfaces can be specified as:\n"
-"                   1. \"stdio\" - Standard IO of a program (terminal).\n"
-"                   2. \"local-<file path>\" - Local socket interface on file\n"
-"                      path, for example \"local-/tmp/CO_command_socket\".\n"
-"                   3. \"tcp-<port>\" - Tcp socket interface on specified \n"
-"                      port, for example \"tcp-60000\".\n"
-"                      Note that this option may affect security of the CAN.\n"
-"  -T <timeout_time>   If -c is specified as local or tcp socket, then this\n"
-"                      parameter specifies socket timeout time in milliseconds.\n"
-"                      Default is 0 - no timeout on established connection.\n");
+    printf("  -c <interface>      Enable command interface for master functionality.\n"
+           "                      One of three types of interfaces can be specified as:\n"
+           "                   1. \"stdio\" - Standard IO of a program (terminal).\n"
+           "                   2. \"local-<file path>\" - Local socket interface on file\n"
+           "                      path, for example \"local-/tmp/CO_command_socket\".\n"
+           "                   3. \"tcp-<port>\" - Tcp socket interface on specified \n"
+           "                      port, for example \"tcp-60000\".\n"
+           "                      Note that this option may affect security of the CAN.\n"
+           "  -T <timeout_time>   If -c is specified as local or tcp socket, then this\n"
+           "                      parameter specifies socket timeout time in milliseconds.\n"
+           "                      Default is 0 - no timeout on established connection.\n");
 #endif
-printf(
-"\n"
-"See also: https://github.com/CANopenNode/CANopenNode\n"
-"\n");
+    printf("\n"
+           "See also: https://github.com/CANopenNode/CANopenNode\n"
+           "\n");
 }
-
 
 /*******************************************************************************
  * Mainline thread
  ******************************************************************************/
-int main (int argc, char *argv[]) {
+int
+main(int argc, char* argv[]) {
     int programExit = EXIT_SUCCESS;
     CO_epoll_t epMain;
 #ifndef CO_SINGLE_THREAD
@@ -276,31 +262,24 @@ int main (int argc, char *argv[]) {
     int opt;
     bool_t firstRun = true;
 
-    char* CANdevice = NULL;         /* CAN device, configurable by arguments. */
-    int16_t nodeIdFromArgs = -1;    /* May be set by arguments */
-    bool_t rebootEnable = false;    /* Configurable by arguments */
+    char* CANdevice = NULL;      /* CAN device, configurable by arguments. */
+    int16_t nodeIdFromArgs = -1; /* May be set by arguments */
+    bool_t rebootEnable = false; /* Configurable by arguments */
 
 #if (CO_CONFIG_STORAGE) & CO_CONFIG_STORAGE_ENABLE
     CO_storage_t storage;
     CO_storage_entry_t storageEntries[] = {
-        {
-            .addr = &OD_PERSIST_COMM,
-            .len = sizeof(OD_PERSIST_COMM),
-            .subIndexOD = 2,
-            .attr = CO_storage_cmd | CO_storage_restore,
-            .filename = {'o','d','_','c','o','m','m',
-                        '.','p','e','r','s','i','s','t','\0'}
-        },
-        {
-            .addr = &mlStorage,
-            .len = sizeof(mlStorage),
-            .subIndexOD = 4,
-            .attr = CO_storage_cmd | CO_storage_auto | CO_storage_restore,
-            .filename = {'m','a','i','n','l','i','n','e',
-                         '.','p','e','r','s','i','s','t','\0'}
-        },
-        CO_STORAGE_APPLICATION
-    };
+        {.addr = &OD_PERSIST_COMM,
+         .len = sizeof(OD_PERSIST_COMM),
+         .subIndexOD = 2,
+         .attr = CO_storage_cmd | CO_storage_restore,
+         .filename = {'o', 'd', '_', 'c', 'o', 'm', 'm', '.', 'p', 'e', 'r', 's', 'i', 's', 't', '\0'}},
+        {.addr = &mlStorage,
+         .len = sizeof(mlStorage),
+         .subIndexOD = 4,
+         .attr = CO_storage_cmd | CO_storage_auto | CO_storage_restore,
+         .filename = {'m', 'a', 'i', 'n', 'l', 'i', 'n', 'e', '.', 'p', 'e', 'r', 's', 'i', 's', 't', '\0'}},
+        CO_STORAGE_APPLICATION};
     uint8_t storageEntriesCount = sizeof(storageEntries) / sizeof(storageEntries[0]);
     uint32_t storageInitError = 0;
     uint32_t storageErrorPrev = 0;
@@ -312,67 +291,59 @@ int main (int argc, char *argv[]) {
     /* values from CO_commandInterface_t */
     int32_t commandInterface = CO_COMMAND_IF_DISABLED;
     /* local socket path if commandInterface == CO_COMMAND_IF_LOCAL_SOCKET */
-    char *localSocketPath = NULL;
+    char* localSocketPath = NULL;
     uint32_t socketTimeout_ms = 0;
 #else
-    #define commandInterface 0
-    #define localSocketPath NULL
+#define commandInterface 0
+#define localSocketPath  NULL
 #endif
 
     /* configure system log */
-    setlogmask(LOG_UPTO (LOG_DEBUG)); /* LOG_DEBUG - log all messages */
+    setlogmask(LOG_UPTO(LOG_DEBUG));                  /* LOG_DEBUG - log all messages */
     openlog(argv[0], LOG_PID | LOG_PERROR, LOG_USER); /* print also to standard error */
 
     /* Get program options */
-    if(argc < 2 || strcmp(argv[1], "--help") == 0){
+    if (argc < 2 || strcmp(argv[1], "--help") == 0) {
         printUsage(argv[0]);
         exit(EXIT_SUCCESS);
     }
-    while((opt = getopt(argc, argv, "i:p:rc:T:s:")) != -1) {
+    while ((opt = getopt(argc, argv, "i:p:rc:T:s:")) != -1) {
         switch (opt) {
             case 'i': {
                 long int nodeIdLong = strtol(optarg, NULL, 0);
-                nodeIdFromArgs = (nodeIdLong < 0 || nodeIdLong > 0xFF)
-                               ? 0 : (uint8_t)strtol(optarg, NULL, 0);
+                nodeIdFromArgs = (nodeIdLong < 0 || nodeIdLong > 0xFF) ? 0 : (uint8_t)strtol(optarg, NULL, 0);
                 break;
             }
 #ifndef CO_SINGLE_THREAD
-            case 'p': rtPriority = strtol(optarg, NULL, 0);
-                break;
+            case 'p': rtPriority = strtol(optarg, NULL, 0); break;
 #endif
-            case 'r': rebootEnable = true;
-                break;
+            case 'r': rebootEnable = true; break;
 #if (CO_CONFIG_GTW) & CO_CONFIG_GTW_ASCII
             case 'c': {
-                const char *comm_stdio = "stdio";
-                const char *comm_local = "local-";
-                const char *comm_tcp = "tcp-";
+                const char* comm_stdio = "stdio";
+                const char* comm_local = "local-";
+                const char* comm_tcp = "tcp-";
                 if (strcmp(optarg, comm_stdio) == 0) {
                     commandInterface = CO_COMMAND_IF_STDIO;
-                }
-                else if (strncmp(optarg, comm_local, strlen(comm_local)) == 0) {
+                } else if (strncmp(optarg, comm_local, strlen(comm_local)) == 0) {
                     commandInterface = CO_COMMAND_IF_LOCAL_SOCKET;
                     localSocketPath = &optarg[6];
-                }
-                else if (strncmp(optarg, comm_tcp, strlen(comm_tcp)) == 0) {
-                    const char *portStr = &optarg[4];
+                } else if (strncmp(optarg, comm_tcp, strlen(comm_tcp)) == 0) {
+                    const char* portStr = &optarg[4];
                     uint16_t port;
                     int nMatch = sscanf(portStr, "%hu", &port);
-                    if(nMatch != 1) {
+                    if (nMatch != 1) {
                         log_printf(LOG_CRIT, DBG_NOT_TCP_PORT, portStr);
                         exit(EXIT_FAILURE);
                     }
                     commandInterface = port;
-                }
-                else {
+                } else {
                     log_printf(LOG_CRIT, DBG_ARGUMENT_UNKNOWN, "-c", optarg);
                     exit(EXIT_FAILURE);
                 }
                 break;
             }
-            case 'T':
-                socketTimeout_ms = strtoul(optarg, NULL, 0);
-                break;
+            case 'T': socketTimeout_ms = strtoul(optarg, NULL, 0); break;
 #endif
 #if (CO_CONFIG_STORAGE) & CO_CONFIG_STORAGE_ENABLE
             case 's': {
@@ -390,48 +361,42 @@ int main (int argc, char *argv[]) {
                 break;
             }
 #endif
-            default:
-                printUsage(argv[0]);
-                exit(EXIT_FAILURE);
+            default: printUsage(argv[0]); exit(EXIT_FAILURE);
         }
     }
 
-    if(optind < argc) {
+    if (optind < argc) {
         CANdevice = argv[optind];
         CANptr.can_ifindex = if_nametoindex(CANdevice);
     }
 
     /* Valid NodeId is 1..127 or 0xFF(unconfigured) in case of LSSslaveEnabled */
     if ((nodeIdFromArgs == 0 || nodeIdFromArgs > 127)
-       && (!CO_isLSSslaveEnabled(CO)
-           || nodeIdFromArgs != CO_LSS_NODE_ID_ASSIGNMENT)
-    ) {
+        && (!CO_isLSSslaveEnabled(CO) || nodeIdFromArgs != CO_LSS_NODE_ID_ASSIGNMENT)) {
         log_printf(LOG_CRIT, DBG_WRONG_NODE_ID, nodeIdFromArgs);
         printUsage(argv[0]);
         exit(EXIT_FAILURE);
     }
 
 #ifndef CO_SINGLE_THREAD
-    if(rtPriority != -1 && (rtPriority < sched_get_priority_min(SCHED_FIFO)
-                         || rtPriority > sched_get_priority_max(SCHED_FIFO))) {
+    if (rtPriority != -1
+        && (rtPriority < sched_get_priority_min(SCHED_FIFO) || rtPriority > sched_get_priority_max(SCHED_FIFO))) {
         log_printf(LOG_CRIT, DBG_WRONG_PRIORITY, rtPriority);
         printUsage(argv[0]);
         exit(EXIT_FAILURE);
     }
 #endif
 
-    if(CANptr.can_ifindex == 0) {
+    if (CANptr.can_ifindex == 0) {
         log_printf(LOG_CRIT, DBG_NO_CAN_DEVICE, CANdevice);
         exit(EXIT_FAILURE);
     }
 
-
-    log_printf(LOG_INFO, DBG_CAN_OPEN_INFO, mlStorage.pendingNodeId,"starting");
-
+    log_printf(LOG_INFO, DBG_CAN_OPEN_INFO, mlStorage.pendingNodeId, "starting");
 
     /* Allocate memory for CANopen objects */
     uint32_t heapMemoryUsed = 0;
-    CO_config_t *config_ptr = NULL;
+    CO_config_t* config_ptr = NULL;
 #ifdef CO_MULTIPLE_OD
     /* example usage of CO_MULTIPLE_OD (but still single OD here) */
     CO_config_t co_config = {0};
@@ -455,24 +420,17 @@ int main (int argc, char *argv[]) {
 #endif /* CO_MULTIPLE_OD */
     CO = CO_new(config_ptr, &heapMemoryUsed);
     if (CO == NULL) {
-        log_printf(LOG_CRIT, DBG_GENERAL,
-                   "CO_new(), heapMemoryUsed=", heapMemoryUsed);
+        log_printf(LOG_CRIT, DBG_GENERAL, "CO_new(), heapMemoryUsed=", heapMemoryUsed);
         exit(EXIT_FAILURE);
     }
 
-
 #if (CO_CONFIG_STORAGE) & CO_CONFIG_STORAGE_ENABLE
-    err = CO_storageLinux_init(&storage,
-                               CO->CANmodule,
-                               OD_ENTRY_H1010_storeParameters,
-                               OD_ENTRY_H1011_restoreDefaultParameters,
-                               storageEntries,
-                               storageEntriesCount,
+    err = CO_storageLinux_init(&storage, CO->CANmodule, OD_ENTRY_H1010_storeParameters,
+                               OD_ENTRY_H1011_restoreDefaultParameters, storageEntries, storageEntriesCount,
                                &storageInitError);
 
     if (err != CO_ERROR_NO && err != CO_ERROR_DATA_CORRUPT) {
-        char *filename = storageInitError < storageEntriesCount
-                       ? storageEntries[storageInitError].filename : "???";
+        char* filename = storageInitError < storageEntriesCount ? storageEntries[storageInitError].filename : "???";
         log_printf(LOG_CRIT, DBG_STORAGE, filename);
         exit(EXIT_FAILURE);
     }
@@ -480,14 +438,11 @@ int main (int argc, char *argv[]) {
 #ifdef CO_USE_APPLICATION
     /* Execute optional external application code */
     uint32_t errInfo_app_programStart = 0;
-    err = app_programStart(&mlStorage.pendingBitRate,
-                           &mlStorage.pendingNodeId,
-                           &errInfo_app_programStart);
+    err = app_programStart(&mlStorage.pendingBitRate, &mlStorage.pendingNodeId, &errInfo_app_programStart);
     if (err != CO_ERROR_NO) {
         if (err == CO_ERROR_OD_PARAMETERS) {
             log_printf(LOG_CRIT, DBG_OD_ENTRY, errInfo_app_programStart);
-        }
-        else {
+        } else {
             log_printf(LOG_CRIT, DBG_CAN_OPEN, "app_programStart()", err);
         }
         exit(EXIT_FAILURE);
@@ -504,11 +459,11 @@ int main (int argc, char *argv[]) {
     }
 
     /* Catch signals SIGINT and SIGTERM */
-    if(signal(SIGINT, sigHandler) == SIG_ERR) {
+    if (signal(SIGINT, sigHandler) == SIG_ERR) {
         log_printf(LOG_CRIT, DBG_ERRNO, "signal(SIGINT, sigHandler)");
         exit(EXIT_FAILURE);
     }
-    if(signal(SIGTERM, sigHandler) == SIG_ERR) {
+    if (signal(SIGTERM, sigHandler) == SIG_ERR) {
         log_printf(LOG_CRIT, DBG_ERRNO, "signal(SIGTERM, sigHandler)");
         exit(EXIT_FAILURE);
     }
@@ -526,16 +481,14 @@ int main (int argc, char *argv[]) {
 
     /* Create epoll functions */
     err = CO_epoll_create(&epMain, MAIN_THREAD_INTERVAL_US);
-    if(err != CO_ERROR_NO) {
-        log_printf(LOG_CRIT, DBG_GENERAL,
-                   "CO_epoll_create(main), err=", err);
+    if (err != CO_ERROR_NO) {
+        log_printf(LOG_CRIT, DBG_GENERAL, "CO_epoll_create(main), err=", err);
         exit(EXIT_FAILURE);
     }
 #ifndef CO_SINGLE_THREAD
     err = CO_epoll_create(&epRT, TMR_THREAD_INTERVAL_US);
-    if(err != CO_ERROR_NO) {
-        log_printf(LOG_CRIT, DBG_GENERAL,
-                   "CO_epoll_create(RT), err=", err);
+    if (err != CO_ERROR_NO) {
+        log_printf(LOG_CRIT, DBG_GENERAL, "CO_epoll_create(RT), err=", err);
         exit(EXIT_FAILURE);
     }
     CANptr.epoll_fd = epRT.epoll_fd;
@@ -543,49 +496,43 @@ int main (int argc, char *argv[]) {
     CANptr.epoll_fd = epMain.epoll_fd;
 #endif
 #if (CO_CONFIG_GTW) & CO_CONFIG_GTW_ASCII
-    err = CO_epoll_createGtw(&epGtw, epMain.epoll_fd, commandInterface,
-                              socketTimeout_ms, localSocketPath);
-    if(err != CO_ERROR_NO) {
+    err = CO_epoll_createGtw(&epGtw, epMain.epoll_fd, commandInterface, socketTimeout_ms, localSocketPath);
+    if (err != CO_ERROR_NO) {
         log_printf(LOG_CRIT, DBG_GENERAL, "CO_epoll_createGtw(), err=", err);
         exit(EXIT_FAILURE);
     }
 #endif
 
-
-    while(reset != CO_RESET_APP && reset != CO_RESET_QUIT && CO_endProgram == 0) {
-/* CANopen communication reset - initialize CANopen objects *******************/
+    while (reset != CO_RESET_APP && reset != CO_RESET_QUIT && CO_endProgram == 0) {
+        /* CANopen communication reset - initialize CANopen objects *******************/
         uint32_t errInfo;
 
         /* Wait rt_thread. */
-        if(!firstRun) {
+        if (!firstRun) {
             CO_LOCK_OD(CO->CANmodule);
             CO->CANmodule->CANnormal = false;
             CO_UNLOCK_OD(CO->CANmodule);
         }
 
         /* Enter CAN configuration. */
-        CO_CANsetConfigurationMode((void *)&CANptr);
+        CO_CANsetConfigurationMode((void*)&CANptr);
         CO_CANmodule_disable(CO->CANmodule);
 
-
         /* initialize CANopen */
-        err = CO_CANinit(CO, (void *)&CANptr, 0 /* bit rate not used */);
-        if(err != CO_ERROR_NO) {
+        err = CO_CANinit(CO, (void*)&CANptr, 0 /* bit rate not used */);
+        if (err != CO_ERROR_NO) {
             log_printf(LOG_CRIT, DBG_CAN_OPEN, "CO_CANinit()", err);
             programExit = EXIT_FAILURE;
             CO_endProgram = 1;
             continue;
         }
 
-        CO_LSS_address_t lssAddress = {.identity = {
-            .vendorID = OD_PERSIST_COMM.x1018_identity.vendor_ID,
-            .productCode = OD_PERSIST_COMM.x1018_identity.productCode,
-            .revisionNumber = OD_PERSIST_COMM.x1018_identity.revisionNumber,
-            .serialNumber = OD_PERSIST_COMM.x1018_identity.serialNumber
-        }};
-        err = CO_LSSinit(CO, &lssAddress,
-                         &mlStorage.pendingNodeId, &mlStorage.pendingBitRate);
-        if(err != CO_ERROR_NO) {
+        CO_LSS_address_t lssAddress = {.identity = {.vendorID = OD_PERSIST_COMM.x1018_identity.vendor_ID,
+                                                    .productCode = OD_PERSIST_COMM.x1018_identity.productCode,
+                                                    .revisionNumber = OD_PERSIST_COMM.x1018_identity.revisionNumber,
+                                                    .serialNumber = OD_PERSIST_COMM.x1018_identity.serialNumber}};
+        err = CO_LSSinit(CO, &lssAddress, &mlStorage.pendingNodeId, &mlStorage.pendingBitRate);
+        if (err != CO_ERROR_NO) {
             log_printf(LOG_CRIT, DBG_CAN_OPEN, "CO_LSSinit()", err);
             programExit = EXIT_FAILURE;
             CO_endProgram = 1;
@@ -595,23 +542,21 @@ int main (int argc, char *argv[]) {
         CO_activeNodeId = mlStorage.pendingNodeId;
         errInfo = 0;
 
-        err = CO_CANopenInit(CO,                /* CANopen object */
-                             NULL,              /* alternate NMT */
-                             NULL,              /* alternate em */
-                             OD,                /* Object dictionary */
-                             OD_STATUS_BITS,    /* Optional OD_statusBits */
-                             NMT_CONTROL,       /* CO_NMT_control_t */
-                             FIRST_HB_TIME,     /* firstHBTime_ms */
+        err = CO_CANopenInit(CO,                   /* CANopen object */
+                             NULL,                 /* alternate NMT */
+                             NULL,                 /* alternate em */
+                             OD,                   /* Object dictionary */
+                             OD_STATUS_BITS,       /* Optional OD_statusBits */
+                             NMT_CONTROL,          /* CO_NMT_control_t */
+                             FIRST_HB_TIME,        /* firstHBTime_ms */
                              SDO_SRV_TIMEOUT_TIME, /* SDOserverTimeoutTime_ms */
                              SDO_CLI_TIMEOUT_TIME, /* SDOclientTimeoutTime_ms */
-                             SDO_CLI_BLOCK,     /* SDOclientBlockTransfer */
-                             CO_activeNodeId,
-                             &errInfo);
-        if(err != CO_ERROR_NO && err != CO_ERROR_NODE_ID_UNCONFIGURED_LSS) {
+                             SDO_CLI_BLOCK,        /* SDOclientBlockTransfer */
+                             CO_activeNodeId, &errInfo);
+        if (err != CO_ERROR_NO && err != CO_ERROR_NODE_ID_UNCONFIGURED_LSS) {
             if (err == CO_ERROR_OD_PARAMETERS) {
                 log_printf(LOG_CRIT, DBG_OD_ENTRY, errInfo);
-            }
-            else {
+            } else {
                 log_printf(LOG_CRIT, DBG_CAN_OPEN, "CO_CANopenInit()", err);
             }
             programExit = EXIT_FAILURE;
@@ -624,12 +569,10 @@ int main (int argc, char *argv[]) {
 #if (CO_CONFIG_GTW) & CO_CONFIG_GTW_ASCII
         CO_epoll_initCANopenGtw(&epGtw, CO);
 #endif
-        CO_LSSslave_initCfgStoreCall(CO->LSSslave, &mlStorage,
-                                         LSScfgStoreCallback);
-        if(!CO->nodeIdUnconfigured) {
-            if(errInfo != 0) {
-                CO_errorReport(CO->em, CO_EM_INCONSISTENT_OBJECT_DICT,
-                               CO_EMC_DATA_SET, errInfo);
+        CO_LSSslave_initCfgStoreCall(CO->LSSslave, &mlStorage, LSScfgStoreCallback);
+        if (!CO->nodeIdUnconfigured) {
+            if (errInfo != 0) {
+                CO_errorReport(CO->em, CO_EM_INCONSISTENT_OBJECT_DICT, CO_EMC_DATA_SET, errInfo);
             }
 #if (CO_CONFIG_EM) & CO_CONFIG_EM_CONSUMER
             CO_EM_initCallbackRx(CO->em, EmergencyRxCallback);
@@ -638,19 +581,16 @@ int main (int argc, char *argv[]) {
             CO_NMT_initCallbackChanged(CO->NMT, NmtChangedCallback);
 #endif
 #if (CO_CONFIG_HB_CONS) & CO_CONFIG_HB_CONS_CALLBACK_CHANGE
-            CO_HBconsumer_initCallbackNmtChanged(CO->HBcons, 0, NULL,
-                                                 HeartbeatNmtChangedCallback);
+            CO_HBconsumer_initCallbackNmtChanged(CO->HBcons, 0, NULL, HeartbeatNmtChangedCallback);
 #endif
 #if (CO_CONFIG_STORAGE) & CO_CONFIG_STORAGE_ENABLE
-            if(storageInitError != 0) {
-                CO_errorReport(CO->em, CO_EM_NON_VOLATILE_MEMORY,
-                               CO_EMC_HARDWARE, storageInitError);
+            if (storageInitError != 0) {
+                CO_errorReport(CO->em, CO_EM_NON_VOLATILE_MEMORY, CO_EMC_HARDWARE, storageInitError);
             }
 #endif
 #ifdef CO_USE_APPLICATION
             if (errInfo_app_programStart != 0) {
-                CO_errorReport(CO->em, CO_EM_INCONSISTENT_OBJECT_DICT,
-                               CO_EMC_DATA_SET, errInfo_app_programStart);
+                CO_errorReport(CO->em, CO_EM_INCONSISTENT_OBJECT_DICT, CO_EMC_DATA_SET, errInfo_app_programStart);
             }
 #endif
 
@@ -659,24 +599,23 @@ int main (int argc, char *argv[]) {
             CO_time_init(&CO_time, CO->SDO[0], &OD_time.epochTimeBaseMs, &OD_time.epochTimeOffsetMs, 0x2130);
 #endif
             log_printf(LOG_INFO, DBG_CAN_OPEN_INFO, CO_activeNodeId, "communication reset");
-        }
-        else {
+        } else {
             log_printf(LOG_INFO, DBG_CAN_OPEN_INFO, CO_activeNodeId, "node-id not initialized");
         }
 
         /* First time only initialization. */
-        if(firstRun) {
+        if (firstRun) {
             firstRun = false;
             CO_TIME_set(CO->TIME, time_ms, time_days, TIME_STAMP_INTERVAL_MS);
 #ifndef CO_SINGLE_THREAD
             /* Create rt_thread and set priority */
-            if(pthread_create(&rt_thread_id, NULL, rt_thread, NULL) != 0) {
+            if (pthread_create(&rt_thread_id, NULL, rt_thread, NULL) != 0) {
                 log_printf(LOG_CRIT, DBG_ERRNO, "pthread_create(rt_thread)");
                 programExit = EXIT_FAILURE;
                 CO_endProgram = 1;
                 continue;
             }
-            if(rtPriority > 0) {
+            if (rtPriority > 0) {
                 struct sched_param param;
 
                 param.sched_priority = rtPriority;
@@ -690,30 +629,26 @@ int main (int argc, char *argv[]) {
 #endif
         } /* if(firstRun) */
 
-
 #ifdef CO_USE_APPLICATION
         /* Execute optional external application code */
         app_communicationReset(CO);
 #endif
 
         errInfo = 0;
-        err = CO_CANopenInitPDO(CO,             /* CANopen object */
-                                CO->em,         /* emergency object */
-                                OD,             /* Object dictionary */
-                                CO_activeNodeId,
-                                &errInfo);
-        if(err != CO_ERROR_NO && err != CO_ERROR_NODE_ID_UNCONFIGURED_LSS) {
+        err = CO_CANopenInitPDO(CO,     /* CANopen object */
+                                CO->em, /* emergency object */
+                                OD,     /* Object dictionary */
+                                CO_activeNodeId, &errInfo);
+        if (err != CO_ERROR_NO && err != CO_ERROR_NODE_ID_UNCONFIGURED_LSS) {
             if (err == CO_ERROR_OD_PARAMETERS) {
                 log_printf(LOG_CRIT, DBG_OD_ENTRY, errInfo);
-            }
-            else {
+            } else {
                 log_printf(LOG_CRIT, DBG_CAN_OPEN, "CO_CANopenInitPDO()", err);
             }
             programExit = EXIT_FAILURE;
             CO_endProgram = 1;
             continue;
         }
-
 
         /* start CAN */
         CO_CANsetNormalMode(CO->CANmodule);
@@ -722,9 +657,8 @@ int main (int argc, char *argv[]) {
 
         log_printf(LOG_INFO, DBG_CAN_OPEN_INFO, CO_activeNodeId, "running ...");
 
-
-        while(reset == CO_RESET_NOT && CO_endProgram == 0) {
-/* loop for normal program execution ******************************************/
+        while (reset == CO_RESET_NOT && CO_endProgram == 0) {
+            /* loop for normal program execution ******************************************/
             CO_epoll_wait(&epMain);
 #ifdef CO_SINGLE_THREAD
             CO_epoll_processRT(&epMain, CO, false);
@@ -744,15 +678,12 @@ int main (int argc, char *argv[]) {
             /* don't save more often than interval */
             if (storageIntervalTimer < CO_STORAGE_AUTO_INTERVAL) {
                 storageIntervalTimer += epMain.timeDifference_us;
-            }
-            else {
+            } else {
                 uint32_t mask = CO_storageLinux_auto_process(&storage, false);
-                if(mask != storageErrorPrev && !CO->nodeIdUnconfigured) {
-                    if(mask != 0) {
-                        CO_errorReport(CO->em, CO_EM_NON_VOLATILE_AUTO_SAVE,
-                                       CO_EMC_HARDWARE, mask);
-                    }
-                    else {
+                if (mask != storageErrorPrev && !CO->nodeIdUnconfigured) {
+                    if (mask != 0) {
+                        CO_errorReport(CO->em, CO_EM_NON_VOLATILE_AUTO_SAVE, CO_EMC_HARDWARE, mask);
+                    } else {
                         CO_errorReset(CO->em, CO_EM_NON_VOLATILE_AUTO_SAVE, 0);
                     }
                 }
@@ -763,8 +694,7 @@ int main (int argc, char *argv[]) {
         }
     } /* while(reset != CO_RESET_APP */
 
-
-/* program exit ***************************************************************/
+    /* program exit ***************************************************************/
     /* join threads */
     CO_endProgram = 1;
 #ifndef CO_SINGLE_THREAD
@@ -790,15 +720,15 @@ int main (int argc, char *argv[]) {
 #if (CO_CONFIG_GTW) & CO_CONFIG_GTW_ASCII
     CO_epoll_closeGtw(&epGtw);
 #endif
-    CO_CANsetConfigurationMode((void *)&CANptr);
+    CO_CANsetConfigurationMode((void*)&CANptr);
     CO_delete(CO);
 
     log_printf(LOG_INFO, DBG_CAN_OPEN_INFO, CO_activeNodeId, "finished");
 
     /* Flush all buffers (and reboot) */
-    if(rebootEnable && reset == CO_RESET_APP) {
+    if (rebootEnable && reset == CO_RESET_APP) {
         sync();
-        if(reboot(LINUX_REBOOT_CMD_RESTART) != 0) {
+        if (reboot(LINUX_REBOOT_CMD_RESTART) != 0) {
             log_printf(LOG_CRIT, DBG_ERRNO, "reboot()");
             exit(EXIT_FAILURE);
         }
@@ -811,10 +741,11 @@ int main (int argc, char *argv[]) {
 /*******************************************************************************
  * Realtime thread for CAN receive and threadTmr
  ******************************************************************************/
-static void* rt_thread(void* arg) {
+static void*
+rt_thread(void* arg) {
     (void)arg;
     /* Endless loop */
-    while(CO_endProgram == 0) {
+    while (CO_endProgram == 0) {
 
         CO_epoll_wait(&epRT);
         CO_epoll_processRT(&epRT, CO, true);
@@ -823,7 +754,7 @@ static void* rt_thread(void* arg) {
 #if (CO_CONFIG_TRACE) & CO_CONFIG_TRACE_ENABLE
         /* Monitor variables with trace objects */
         CO_time_process(&CO_time);
-        for(i=0; i<OD_traceEnable && i<co->CNT_TRACE; i++) {
+        for (i = 0; i < OD_traceEnable && i < co->CNT_TRACE; i++) {
             CO_trace_process(CO->trace[i], *CO_time.epochTimeOffsetMs);
         }
 #endif
@@ -832,7 +763,6 @@ static void* rt_thread(void* arg) {
         /* Execute optional external application code */
         app_programRt(CO, epRT.timeDifference_us);
 #endif
-
     }
 
     return NULL;
