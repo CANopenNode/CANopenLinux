@@ -629,7 +629,7 @@ int main (int argc, char *argv[]) {
 #if (CO_CONFIG_GTW) & CO_CONFIG_GTW_ASCII
         CO_epoll_initCANopenGtw(&epGtw, CO);
 #endif
-        CO_LSSslave_initCfgStoreCallback(CO->LSSslave, &mlStorage,
+        CO_LSSslave_initCfgStoreCall(CO->LSSslave, &mlStorage,
                                          LSScfgStoreCallback);
         if(!CO->nodeIdUnconfigured) {
             if(errInfo != 0) {
