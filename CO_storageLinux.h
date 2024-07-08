@@ -6,21 +6,16 @@
  * @author      Janez Paternoster
  * @copyright   2021 Janez Paternoster
  *
- * This file is part of CANopenNode, an opensource CANopen Stack.
- * Project home page is <https://github.com/CANopenNode/CANopenNode>.
- * For more information on CANopen see <http://www.can-cia.org/>.
+ * This file is part of <https://github.com/CANopenNode/CANopenNode>, a CANopen Stack.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is
+ * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the License.
  */
 
 #ifndef CO_STORAGE_LINUX_H
@@ -54,11 +49,9 @@ extern "C" {
  * and writes data to addresses specified inside entries. This function
  * internally calls @ref CO_storage_init().
  *
- * @param storage This object will be initialized. It must be defined by
- * application and must exist permanently.
+ * @param storage This object will be initialized. It must be defined by application and must exist permanently.
  * @param CANmodule CAN device, used for @ref CO_LOCK_OD() macro.
- * @param OD_1010_StoreParameters OD entry for 0x1010 -"Store parameters".
- * Entry is optional, may be NULL.
+ * @param OD_1010_StoreParameters OD entry for 0x1010 -"Store parameters". Entry is optional, may be NULL.
  * @param OD_1011_RestoreDefaultParam OD entry for 0x1011 -"Restore default
  * parameters". Entry is optional, may be NULL.
  * @param entries Pointer to array of storage entries, see @ref CO_storage_init.
@@ -88,11 +81,9 @@ CO_ReturnError_t CO_storageLinux_init(CO_storage_t *storage,
  * into pre-opened file.
  *
  * @param storage This object
- * @param closeFiles If true, then all files will be closed. Use on end of the
- * program.
+ * @param closeFiles If true, then all files will be closed. Use on end of the program.
  *
- * @return 0 on success or bit mask from subIndexOD values, where data was not
- * able to be saved.
+ * @return 0 on success or bit mask from subIndexOD values, where data was not able to be saved.
  */
 uint32_t CO_storageLinux_auto_process(CO_storage_t *storage,
                                       bool_t closeFiles);

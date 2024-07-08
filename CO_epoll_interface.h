@@ -9,21 +9,16 @@
  * @copyright   2018 - 2020 Neuberger Gebaeudeautomation GmbH
  *
  *
- * This file is part of CANopenNode, an opensource CANopen Stack.
- * Project home page is <https://github.com/CANopenNode/CANopenNode>.
- * For more information on CANopen see <http://www.can-cia.org/>.
+ * This file is part of <https://github.com/CANopenNode/CANopenNode>, a CANopen Stack.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is
+ * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the License.
  */
 
 #ifndef CO_EPOLL_INTERFACE_H
@@ -122,8 +117,7 @@ typedef struct {
  * @param ep This object
  * @param timerInterval_us Timer interval in microseconds
  *
- * @return @ref CO_ReturnError_t CO_ERROR_NO, CO_ERROR_ILLEGAL_ARGUMENT or
- * CO_ERROR_SYSCALL.
+ * @return @ref CO_ReturnError_t CO_ERROR_NO, CO_ERROR_ILLEGAL_ARGUMENT or CO_ERROR_SYSCALL.
  */
 CO_ReturnError_t CO_epoll_create(CO_epoll_t *ep, uint32_t timerInterval_us);
 
@@ -258,8 +252,7 @@ typedef struct {
  * @param socketTimeout_ms Timeout for established socket connection in [ms]
  * @param localSocketPath File path, if commandInterface is local socket
  *
- * @return @ref CO_ReturnError_t CO_ERROR_NO, CO_ERROR_ILLEGAL_ARGUMENT or
- * CO_ERROR_SYSCALL.
+ * @return @ref CO_ReturnError_t CO_ERROR_NO, CO_ERROR_ILLEGAL_ARGUMENT or CO_ERROR_SYSCALL.
  */
 CO_ReturnError_t CO_epoll_createGtw(CO_epoll_gtw_t *epGtw,
                                     int epoll_fd,
@@ -302,6 +295,6 @@ void CO_epoll_processGtw(CO_epoll_gtw_t *epGtw,
 
 #ifdef __cplusplus
 }
-#endif /*__cplusplus*/
+#endif /* __cplusplus */
 
 #endif /* CO_EPOLL_INTERFACE_H */

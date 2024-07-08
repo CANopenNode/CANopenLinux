@@ -5,21 +5,16 @@
  * @author      Janez Paternoster
  * @copyright   2020 Janez Paternoster
  *
- * This file is part of CANopenNode, an opensource CANopen Stack.
- * Project home page is <https://github.com/CANopenNode/CANopenNode>.
- * For more information on CANopen see <http://www.can-cia.org/>.
+ * This file is part of <https://github.com/CANopenNode/CANopenNode>, a CANopen Stack.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is
+ * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the License.
  */
 
 #include <stdio.h>
@@ -101,14 +96,14 @@ static int printReply(int fd_gtw) {
     }
 
     for (;;) {
-        ssize_t nRead = read(fd_gtw, &replyBuf[count], BUF_SIZE); /* blocking*/
+        ssize_t nRead = read(fd_gtw, &replyBuf[count], BUF_SIZE); /* blocking */
 
         if(nRead > 0) {
             count += nRead;
             replyBuf[count] = 0;
 
             if (firstPass == 1) {
-                /* check for response type. Only response value goes to stdout*/
+                /* check for response type. Only response value goes to stdout */
                 if (strstr(replyBuf, "] ERROR:") != NULL
                     && strstr(replyBuf, "\r\n") != NULL
                 ) {
@@ -198,7 +193,6 @@ static int printReply(int fd_gtw) {
 }
 
 
-/******************************************************************************/
 int main (int argc, char *argv[]) {
     /* configurable options */
     enum {out_all, out_data, out_flat} outputType = out_all;
@@ -357,7 +351,7 @@ int main (int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
     }
-    else { // addrFamily == AF_UNIX
+    else { /* addrFamily == AF_UNIX */
         fd_gtw = socket(AF_UNIX, SOCK_STREAM, 0);
         if(fd_gtw == -1) {
             perror("Socket creation failed");
@@ -429,14 +423,14 @@ int main (int argc, char *argv[]) {
             size_t len = strlen(commBuf);
             if (len < 1) continue;
 
-            // send command
+            /* send command */
             if (write(fd_gtw, commBuf, len) != len) { /* blocking function */
                 perror("Socket write failed");
                 free(commBuf);
                 exit(EXIT_FAILURE);
             }
 
-            // print reply, if command is complete
+            /* print reply, if command is complete */
             if (commBuf[len - 1] == '\n') {
                 if (printReply(fd_gtw) == EXIT_FAILURE) {
                     ret = EXIT_FAILURE;
@@ -489,7 +483,7 @@ int main (int argc, char *argv[]) {
                     if (len < BUF_SIZE-2 && lastChar != '\n')
                         continue;
 
-                    // send command
+                    /* send command */
                     if (write(fd_gtw, commBuf, len) != len) { /* blocking f. */
                         perror("Socket write failed");
                         free(commBuf);
@@ -513,14 +507,14 @@ int main (int argc, char *argv[]) {
             size_t len = strlen(commBuf);
             if (len < 1) continue;
 
-            // send command
+            /* send command */
             if (write(fd_gtw, commBuf, len) != len) { /* blocking function */
                 perror("Socket write failed");
                 free(commBuf);
                 exit(EXIT_FAILURE);
             }
 
-            // print reply, if command is complete
+            /* print reply, if command is complete */
             if (commBuf[len - 1] == '\n') {
                 if (printReply(fd_gtw) == EXIT_FAILURE) {
                     ret = EXIT_FAILURE;

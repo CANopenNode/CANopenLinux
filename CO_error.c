@@ -6,21 +6,16 @@
  * @copyright   2018 - 2020 Neuberger Gebaeudeautomation GmbH
  *
  *
- * This file is part of CANopenNode, an opensource CANopen Stack.
- * Project home page is <https://github.com/CANopenNode/CANopenNode>.
- * For more information on CANopen see <http://www.can-cia.org/>.
+ * This file is part of <https://github.com/CANopenNode/CANopenNode>, a CANopen Stack.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is
+ * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the License.
  */
 
 #include <string.h>
@@ -35,7 +30,7 @@
 #include "301/CO_driver.h"
 
 
-/**
+/*
  * Reset CAN interface and set to listen only mode
  */
 static CO_CANinterfaceState_t CO_CANerrorSetListenOnly(
@@ -66,7 +61,7 @@ static CO_CANinterfaceState_t CO_CANerrorSetListenOnly(
 }
 
 
-/**
+/*
  * Clear listen only
  */
 static void CO_CANerrorClearListenOnly(
@@ -80,7 +75,7 @@ static void CO_CANerrorClearListenOnly(
 }
 
 
-/**
+/*
  * Check and handle "bus off" state
  */
 static CO_CANinterfaceState_t CO_CANerrorBusoff(
@@ -104,7 +99,7 @@ static CO_CANinterfaceState_t CO_CANerrorBusoff(
 }
 
 
-/**
+/*
  * Check and handle controller problems
  */
 static CO_CANinterfaceState_t CO_CANerrorCrtl(
@@ -165,7 +160,7 @@ static CO_CANinterfaceState_t CO_CANerrorCrtl(
 }
 
 
-/**
+/*
  * Check and handle controller problems
  */
 static CO_CANinterfaceState_t CO_CANerrorNoack(
@@ -199,7 +194,6 @@ static CO_CANinterfaceState_t CO_CANerrorNoack(
 }
 
 
-/******************************************************************************/
 void CO_CANerror_init(
         CO_CANinterfaceErrorhandler_t     *CANerrorhandler,
         int                                fd,
@@ -219,7 +213,6 @@ void CO_CANerror_init(
 }
 
 
-/******************************************************************************/
 void CO_CANerror_disable(
         CO_CANinterfaceErrorhandler_t     *CANerrorhandler)
 {
@@ -232,7 +225,6 @@ void CO_CANerror_disable(
 }
 
 
-/******************************************************************************/
 void CO_CANerror_rxMsg(
         CO_CANinterfaceErrorhandler_t     *CANerrorhandler)
 {
@@ -248,7 +240,6 @@ void CO_CANerror_rxMsg(
 }
 
 
-/******************************************************************************/
 CO_CANinterfaceState_t CO_CANerror_txMsg(
         CO_CANinterfaceErrorhandler_t     *CANerrorhandler)
 {
@@ -272,7 +263,6 @@ CO_CANinterfaceState_t CO_CANerror_txMsg(
 }
 
 
-/******************************************************************************/
 CO_CANinterfaceState_t CO_CANerror_rxMsgError(
         CO_CANinterfaceErrorhandler_t     *CANerrorhandler,
         const struct can_frame            *msg)

@@ -7,21 +7,16 @@
  * @copyright   2004 - 2015 Janez Paternoster, 2017 - 2020 Neuberger Gebaeudeautomation GmbH
  *
  *
- * This file is part of CANopenNode, an opensource CANopen Stack.
- * Project home page is <https://github.com/CANopenNode/CANopenNode>.
- * For more information on CANopen see <http://www.can-cia.org/>.
+ * This file is part of <https://github.com/CANopenNode/CANopenNode>, a CANopen Stack.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is
+ * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the License.
  */
 
 #include <string.h>
@@ -55,7 +50,6 @@ static CO_ReturnError_t CO_CANmodule_addInterface(CO_CANmodule_t *CANmodule,
 
 static const uint32_t CO_INVALID_COB_ID = 0xffffffff;
 
-/******************************************************************************/
 void CO_CANsetIdentToIndex(
         uint32_t               *lookup,
         uint32_t                index,
@@ -85,7 +79,6 @@ void CO_CANsetIdentToIndex(
 }
 
 
-/******************************************************************************/
 static uint32_t CO_CANgetIndexFromIdent(
         uint32_t               *lookup,
         uint32_t                ident)
@@ -101,7 +94,7 @@ static uint32_t CO_CANgetIndexFromIdent(
 #endif /* CO_DRIVER_MULTI_INTERFACE */
 
 
-/** Disable socketCAN rx ******************************************************/
+/* Disable socketCAN rx */
 static CO_ReturnError_t disableRx(CO_CANmodule_t *CANmodule)
 {
     uint32_t i;
@@ -124,7 +117,7 @@ static CO_ReturnError_t disableRx(CO_CANmodule_t *CANmodule)
 }
 
 
-/** Set up or update socketCAN rx filters *************************************/
+/* Set up or update socketCAN rx filters */
 static CO_ReturnError_t setRxFilters(CO_CANmodule_t *CANmodule)
 {
     size_t i;
@@ -167,7 +160,6 @@ static CO_ReturnError_t setRxFilters(CO_CANmodule_t *CANmodule)
 }
 
 
-/******************************************************************************/
 void CO_CANsetConfigurationMode(void *CANptr)
 {
     (void)CANptr;
@@ -175,7 +167,6 @@ void CO_CANsetConfigurationMode(void *CANptr)
 }
 
 
-/******************************************************************************/
 void CO_CANsetNormalMode(CO_CANmodule_t *CANmodule)
 {
     CO_ReturnError_t ret;
@@ -191,7 +182,6 @@ void CO_CANsetNormalMode(CO_CANmodule_t *CANmodule)
 }
 
 
-/******************************************************************************/
 CO_ReturnError_t CO_CANmodule_init(
         CO_CANmodule_t         *CANmodule,
         void                   *CANptr,
@@ -263,7 +253,7 @@ CO_ReturnError_t CO_CANmodule_init(
 }
 
 
-/** enable socketCAN *********************************************************/
+/* enable socketCAN */
 #if CO_DRIVER_MULTI_INTERFACE == 0
 static
 #endif
@@ -320,7 +310,7 @@ CO_ReturnError_t CO_CANmodule_addInterface(CO_CANmodule_t *CANmodule,
     }
 
     /* enable software time stamp mode (hardware timestamps do not work properly
-     * on all devices)*/
+     * on all devices) */
     tmp = (SOF_TIMESTAMPING_SOFTWARE |
            SOF_TIMESTAMPING_RX_SOFTWARE);
     ret = setsockopt(interface->fd, SOL_SOCKET, SO_TIMESTAMPING, &tmp, sizeof(tmp));
@@ -387,7 +377,6 @@ CO_ReturnError_t CO_CANmodule_addInterface(CO_CANmodule_t *CANmodule,
 }
 
 
-/******************************************************************************/
 void CO_CANmodule_disable(CO_CANmodule_t *CANmodule)
 {
     uint32_t i;
@@ -423,7 +412,6 @@ void CO_CANmodule_disable(CO_CANmodule_t *CANmodule)
 }
 
 
-/******************************************************************************/
 CO_ReturnError_t CO_CANrxBufferInit(
         CO_CANmodule_t         *CANmodule,
         uint16_t                index,
@@ -477,7 +465,6 @@ CO_ReturnError_t CO_CANrxBufferInit(
 
 #if CO_DRIVER_MULTI_INTERFACE > 0
 
-/******************************************************************************/
 bool_t CO_CANrxBuffer_getInterface(
         CO_CANmodule_t         *CANmodule,
         uint16_t                ident,
@@ -514,7 +501,6 @@ bool_t CO_CANrxBuffer_getInterface(
 #endif /* CO_DRIVER_MULTI_INTERFACE */
 
 
-/******************************************************************************/
 CO_CANtx_t *CO_CANtxBufferInit(
         CO_CANmodule_t         *CANmodule,
         uint16_t                index,
@@ -550,7 +536,6 @@ CO_CANtx_t *CO_CANtxBufferInit(
 
 #if CO_DRIVER_MULTI_INTERFACE > 0
 
-/******************************************************************************/
 CO_ReturnError_t CO_CANtxBuffer_setInterface(
         CO_CANmodule_t         *CANmodule,
         uint16_t                ident,
@@ -573,7 +558,7 @@ CO_ReturnError_t CO_CANtxBuffer_setInterface(
 #endif /* CO_DRIVER_MULTI_INTERFACE */
 #if CO_DRIVER_MULTI_INTERFACE > 0
 
-/* send CAN message ***********************************************************/
+/* send CAN message */
 static CO_ReturnError_t CO_CANCheckSendInterface(
         CO_CANmodule_t         *CANmodule,
         CO_CANtx_t             *buffer,
@@ -660,7 +645,6 @@ static CO_ReturnError_t CO_CANCheckSendInterface(
 CO_ReturnError_t CO_CANCheckSend(CO_CANmodule_t *CANmodule, CO_CANtx_t *buffer);
 
 
-/******************************************************************************/
 CO_ReturnError_t CO_CANsend(CO_CANmodule_t *CANmodule, CO_CANtx_t *buffer)
 {
     CO_ReturnError_t err;
@@ -675,7 +659,6 @@ CO_ReturnError_t CO_CANsend(CO_CANmodule_t *CANmodule, CO_CANtx_t *buffer)
 }
 
 
-/******************************************************************************/
 CO_ReturnError_t CO_CANCheckSend(CO_CANmodule_t *CANmodule, CO_CANtx_t *buffer)
 {
     uint32_t i;
@@ -765,7 +748,6 @@ CO_ReturnError_t CO_CANsend(CO_CANmodule_t *CANmodule, CO_CANtx_t *buffer)
 #endif /* CO_DRIVER_MULTI_INTERFACE == 0 */
 
 
-/******************************************************************************/
 void CO_CANclearPendingSyncPDOs(CO_CANmodule_t *CANmodule)
 {
     (void)CANmodule;
@@ -773,7 +755,6 @@ void CO_CANclearPendingSyncPDOs(CO_CANmodule_t *CANmodule)
 }
 
 
-/******************************************************************************/
 void CO_CANmodule_process(CO_CANmodule_t *CANmodule)
 {
     if (CANmodule == NULL || CANmodule->CANinterfaceCount == 0) return;
@@ -814,7 +795,7 @@ void CO_CANmodule_process(CO_CANmodule_t *CANmodule)
 }
 
 
-/* Read CAN message from socket and verify some errors ************************/
+/* Read CAN message from socket and verify some errors */
 static CO_ReturnError_t CO_CANread(
         CO_CANmodule_t         *CANmodule,
         CO_CANinterface_t      *interface,
@@ -877,7 +858,7 @@ static CO_ReturnError_t CO_CANread(
 }
 
 
-/* find msg inside rxArray and call corresponding CANrx_callback **************/
+/* find msg inside rxArray and call corresponding CANrx_callback */
 static int32_t CO_CANrxMsg(                 /* return index of received message in rxArray or -1 */
         CO_CANmodule_t        *CANmodule,
         struct can_frame      *msg,         /* CAN message input */
@@ -923,7 +904,6 @@ static int32_t CO_CANrxMsg(                 /* return index of received message 
 }
 
 
-/******************************************************************************/
 bool_t CO_CANrxFromEpoll(CO_CANmodule_t *CANmodule,
                          struct epoll_event *ev,
                          CO_CANrxMsg_t *buffer,
