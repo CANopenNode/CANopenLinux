@@ -346,7 +346,7 @@ gtwa_write_response(void* object, const char* buf, size_t count, uint8_t* connec
 }
 
 static inline void
-socetAcceptEnableForEpoll(CO_epoll_gtw_t* epGtw) {
+socketAcceptEnableForEpoll(CO_epoll_gtw_t* epGtw) {
     struct epoll_event ev = {0};
     int ret;
 
@@ -547,7 +547,7 @@ CO_epoll_processGtw(CO_epoll_gtw_t* epGtw, CO_t* co, CO_epoll_t* ep) {
             }
 
             if (fail) {
-                socetAcceptEnableForEpoll(epGtw);
+                socketAcceptEnableForEpoll(epGtw);
             }
             ep->epoll_new = false;
         } else if ((ep->ev.events & EPOLLIN) != 0 && ep->ev.data.fd == epGtw->gtwa_fd) {
@@ -585,7 +585,7 @@ CO_epoll_processGtw(CO_epoll_gtw_t* epGtw, CO_t* co, CO_epoll_t* ep) {
                             log_printf(LOG_CRIT, DBG_ERRNO, "close(gtwa_fd)");
                         }
                         epGtw->gtwa_fd = -1;
-                        socetAcceptEnableForEpoll(epGtw);
+                        socketAcceptEnableForEpoll(epGtw);
                     } else {
                         CO_GTWA_write(co->gtwa, buf, s);
                     }
@@ -614,7 +614,7 @@ CO_epoll_processGtw(CO_epoll_gtw_t* epGtw, CO_t* co, CO_epoll_t* ep) {
                 log_printf(LOG_CRIT, DBG_ERRNO, "close(gtwa_fd), tmo");
             }
             epGtw->gtwa_fd = -1;
-            socetAcceptEnableForEpoll(epGtw);
+            socketAcceptEnableForEpoll(epGtw);
         } else {
             epGtw->socketTimeoutTmr_us += ep->timeDifference_us;
         }
