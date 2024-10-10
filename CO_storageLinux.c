@@ -33,6 +33,7 @@
  */
 static ODR_t
 storeLinux(CO_storage_entry_t* entry, CO_CANmodule_t* CANmodule) {
+    (void)CANmodule;
     ODR_t ret = ODR_OK;
     uint16_t crc_store;
 
@@ -61,10 +62,10 @@ storeLinux(CO_storage_entry_t* entry, CO_CANmodule_t* CANmodule) {
         if (fp == NULL) {
             ret = ODR_HW;
         } else {
-            CO_LOCK_OD(CANmodule);
+            /* following two lines are subject to race conditions. This function is called only by SDO server
+             * and so it is already protected by CO_LOCK_OD. */
             size_t cnt = fwrite(entry->addr, 1, entry->len, fp);
             crc_store = crc16_ccitt(entry->addr, entry->len, 0);
-            CO_UNLOCK_OD(CANmodule);
             cnt += fwrite(&crc_store, 1, sizeof(crc_store), fp);
             fclose(fp);
             if (cnt != (entry->len + sizeof(crc_store))) {
