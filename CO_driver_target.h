@@ -102,11 +102,15 @@ extern "C" {
      | CO_CONFIG_GLOBAL_FLAG_CALLBACK_PRE)
 #endif
 
+#ifndef CO_CONFIG_GFC
 #define CO_CONFIG_GFC (CO_CONFIG_GFC_ENABLE | CO_CONFIG_GFC_CONSUMER | CO_CONFIG_GFC_PRODUCER)
+#endif
 
+#ifndef CO_CONFIG_SRDO
 #define CO_CONFIG_SRDO                                                                                                 \
     (CO_CONFIG_SRDO_ENABLE | CO_CONFIG_SRDO_CHECK_TX | CO_CONFIG_GLOBAL_FLAG_CALLBACK_PRE                              \
      | CO_CONFIG_GLOBAL_FLAG_TIMERNEXT)
+#endif
 
 #ifndef CO_CONFIG_GTW
 #define CO_CONFIG_GTW                                                                                                  \
