@@ -154,7 +154,6 @@ log_printf(int priority, const char* format, ...) {
         va_start(ap, format);
         vsnprintf(buf + len, sizeof(buf) - len - 2, format, ap);
         va_end(ap);
-        strcat(buf, "\r\n");
         CO_GTWA_log_print(CO->gtwa, buf);
     }
 #endif
