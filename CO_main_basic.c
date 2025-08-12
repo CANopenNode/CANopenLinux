@@ -213,7 +213,7 @@ LSScfgStoreCallback(void* object, uint8_t id, uint16_t bitRate) {
 /* Print usage */
 static void
 printUsage(char* progName) {
-    printf("Usage: %s <CAN device name> [options]\n", progName);
+    printf("Usage: %s [options] <CAN device name>\n", progName);
     printf("\n"
            "Options:\n"
            "  -i <Node ID>        CANopen Node-id (1..127) or 0xFF (LSS unconfigured).\n");
