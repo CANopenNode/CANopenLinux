@@ -65,7 +65,7 @@ printUsage(char* progName) {
             "                   'export cocomm_port=<port>'. Default is 60000.\n"
             "  -i               If set, then standard input will be read after each command\n"
             "                   string from arguments. Useful with write commands.\n"
-            "  -o all|data|flat By defult (setting 'all') outupt is split to colored stderr\n"
+            "  -o all|data|flat By defult (setting 'all') output is split to colored stderr\n"
             "                   and stdout. 'data' prints data only to stdout. 'flat' prints\n"
             "                   all to stdout, set also with 'export cocomm_flat=<0|1>'.\n"
             "  -d <can device>  If specified, then candump of specified CAN device will be\n"
